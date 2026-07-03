@@ -1,0 +1,53 @@
+state,state_abbr,walker_status,treatment_ban,restriction_notes
+Alabama,AL,Banned,1,total ban in Walker table
+Arkansas,AR,Banned,1,total ban in Walker table
+Idaho,ID,Banned,1,total ban in Walker table
+Kentucky,KY,Banned,1,total ban in Walker table
+Louisiana,LA,Banned,1,total ban in Walker table
+Mississippi,MS,Banned,1,total ban in Walker table
+Missouri,MO,Banned,1,total ban in Walker table
+Oklahoma,OK,Banned,1,total ban in Walker table
+South Dakota,SD,Banned,1,total ban in Walker table
+Tennessee,TN,Banned,1,total ban in Walker table
+Texas,TX,Banned,1,total ban in Walker table
+West Virginia,WV,Banned,1,total ban in Walker table
+Wisconsin,WI,Banned,1,total ban in Walker table
+Georgia,GA,Banned,1,6 week restriction in Walker table
+Arizona,AZ,Banned,1,15 week restriction in Walker table
+Florida,FL,Banned,1,15 or 6 week restriction in Walker table
+Utah,UT,Banned,1,8 week restriction in Walker table
+North Carolina,NC,Banned,1,20 week restriction in Walker table
+Indiana,IN,Ban Blocked,0,blocked ban in Walker table
+Iowa,IA,Ban Blocked,0,blocked ban in Walker table
+North Dakota,ND,Ban Blocked,0,blocked ban in Walker table
+Montana,MT,Ban Blocked,0,blocked ban in Walker table
+Ohio,OH,Ban Blocked,0,blocked ban in Walker table
+Wyoming,WY,Ban Blocked,0,blocked ban in Walker table
+Alaska,AK,Legal or Legal Limited,0,control state in Walker table
+Kansas,KS,Legal or Legal Limited,0,control state in Walker table
+Nebraska,NE,Legal or Legal Limited,0,control state in Walker table
+New Hampshire,NH,Legal or Legal Limited,0,control state in Walker table
+South Carolina,SC,Legal or Legal Limited,0,control state in Walker table
+Virginia,VA,Legal or Legal Limited,0,control state in Walker table
+District of Columbia,DC,Legal or Legal Limited,0,control jurisdiction in Walker table
+California,CA,Legal or Legal Limited,0,control state in Walker table
+Colorado,CO,Legal or Legal Limited,0,control state in Walker table
+Connecticut,CT,Legal or Legal Limited,0,control state in Walker table
+Delaware,DE,Legal or Legal Limited,0,control state in Walker table
+Hawaii,HI,Legal or Legal Limited,0,control state in Walker table
+Illinois,IL,Legal or Legal Limited,0,control state in Walker table
+Maine,ME,Legal or Legal Limited,0,control state in Walker table
+Maryland,MD,Legal or Legal Limited,0,control state in Walker table
+Massachusetts,MA,Legal or Legal Limited,0,control state in Walker table
+Michigan,MI,Legal or Legal Limited,0,control state in Walker table
+Minnesota,MN,Legal or Legal Limited,0,control state in Walker table
+Nevada,NV,Legal or Legal Limited,0,control state in Walker table
+New Jersey,NJ,Legal or Legal Limited,0,control state in Walker table
+New Mexico,NM,Legal or Legal Limited,0,control state in Walker table
+New York,NY,Legal or Legal Limited,0,control state in Walker table
+Oregon,OR,Legal or Legal Limited,0,control state in Walker table
+Pennsylvania,PA,Legal or Legal Limited,0,control state in Walker table
+Rhode Island,RI,Legal or Legal Limited,0,control state in Walker table
+Vermont,VT,Legal or Legal Limited,0,control state in Walker table
+Washington,WA,Legal or Legal Limited,0,control state in Walker table
+

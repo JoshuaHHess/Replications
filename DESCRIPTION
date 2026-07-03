@@ -1,0 +1,22 @@
+Package: RAIReproductivePolicyTextbook
+Title: R, AI, and Reproductive Policy Teaching Project
+Version: 0.0.1
+Authors@R: person("Course", "Scaffold", role = c("aut", "cre"), email = "example@example.com")
+Description: Teaching materials and R scripts for replicating Walker et al. (2023) and extending the analysis with Title IX policy information.
+License: MIT + file LICENSE.md
+Encoding: UTF-8
+Depends:
+    R (>= 4.3)
+Imports:
+    readr,
+    dplyr,
+    tidyr,
+    stringr,
+    ggplot2,
+    fixest,
+    broom,
+    rvest,
+    xml2,
+    purrr,
+    scales
+

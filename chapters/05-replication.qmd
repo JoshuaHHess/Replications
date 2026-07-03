@@ -1,0 +1,44 @@
+# Replication
+
+The replication model in `R/functions.R` is:
+
+```r
+fixest::feols(
+  share_female ~ i(year, treatment_ban, ref = 2021) | institution + year,
+  cluster = ~ institution,
+  data = panel
+)
+```
+
+This estimates year-specific differences between ban and control states, with 2021 as the reference year. Institution fixed effects absorb time-invariant differences across schools. Year fixed effects absorb shocks common to all schools.
+
+## Run the template
+
+```{r}
+#| eval: false
+source("R/run_replication_template.R")
+```
+
+Then inspect:
+
+```{r}
+#| eval: false
+readr::read_csv("results/event_study_toy.csv")
+```
+
+## What counts as a successful replication?
+
+A successful replication is not just "my coefficient matches." It includes:
+
+- A complete row audit showing the schools and years in the sample.
+- A treatment-status audit by state.
+- A plot with 2021 normalized to zero.
+- A table with estimates, standard errors, confidence intervals, and p-values.
+- A written comparison to the Walker result.
+
+## Interpretation template
+
+Use this structure:
+
+> Relative to 2021, the estimated 2022 difference between ban-state and control-state schools is `X`. This means the female applicant share was `X * 100` percentage points lower/higher in ban states than the control trend would predict. The pre-2022 coefficients are useful because they show whether the two groups were moving similarly before the policy shock.
+

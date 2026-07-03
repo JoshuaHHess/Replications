@@ -1,0 +1,22 @@
+# Welcome
+
+This little book teaches R and AI-assisted research through a concrete replication project.
+
+Students begin with Walker et al. [-@walker2023anticipatory], a short paper estimating whether the anticipated repeal of *Roe v. Wade* changed the share of female applicants to selective colleges in states where abortion was banned or restricted after *Dobbs*. The replication uses publicly available Common Data Set admissions information and a transparent event-study design.
+
+The extension asks whether institutional Title IX pregnancy and parenting policy information adds a useful layer to the analysis. We use The Pregnant Scholar because it is a legal resource center focused on pregnant and parenting students, and because its policy directory lists family-responsive campus policies such as pregnancy accommodations and parental leave [@pregnantscholar_policy].
+
+## Learning goals
+
+By the end, students should be able to:
+
+- Build a reproducible R project with folders, scripts, data dictionaries, and outputs.
+- Turn a published empirical paper into a data collection and analysis plan.
+- Estimate and interpret a fixed-effects event-study model.
+- Use AI for coding, extraction, debugging, and critique without outsourcing judgment.
+- Document uncertainty, source limitations, and choices that affect estimates.
+
+## The compact version
+
+The Walker paper reports that among 71 highly ranked universities, the 2022 share of female freshman applicants fell by about one percentage point in ban states relative to control states. This course does not treat that estimate as a magic number to memorize. It treats it as a research object students can rebuild, inspect, stress-test, and extend.
+

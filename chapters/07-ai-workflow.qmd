@@ -1,0 +1,43 @@
+# AI Workflow
+
+AI can help students move faster, but the point of the course is to become more responsible, not more casual.
+
+## Useful AI tasks
+
+- Convert a CDS PDF table into a draft CSV row.
+- Explain a model formula in `fixest`.
+- Generate data validation checks.
+- Review code for joins that duplicate rows.
+- Draft a plain-language interpretation of a coefficient.
+
+## Banned AI shortcuts
+
+- Do not ask AI to invent missing data.
+- Do not cite a source AI has not linked and you have not opened.
+- Do not paste a result into your paper without rerunning the code.
+- Do not let AI choose the treatment definition without checking the paper.
+
+## Prompt pattern
+
+Use this pattern:
+
+```text
+I am replicating Walker et al. (2023). Here is my data dictionary.
+Here is my R code.
+Here is the error or output.
+Please identify possible causes, but do not rewrite the whole project.
+Give me checks I can run before changing the model.
+```
+
+## Verification pattern
+
+Every AI log entry should include:
+
+- prompt
+- AI output summary
+- what you accepted
+- what you rejected
+- how you verified it
+
+Use `prompts/ai_prompt_log_template.md`.
+

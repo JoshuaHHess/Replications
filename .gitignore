@@ -1,0 +1,13 @@
+.Rhistory
+.RData
+.Rproj.user/
+_site/
+/.quarto/
+data-raw/*.csv
+data-raw/*.xlsx
+data-raw/*.pdf
+data/analysis_*.csv
+data/title_ix_policy_directory_snapshot.csv
+results/*.png
+results/*.csv
+!results/.gitkeep

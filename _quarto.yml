@@ -1,0 +1,35 @@
+project:
+  type: book
+  output-dir: _site
+
+book:
+  title: "R, AI, and Reproductive Policy"
+  subtitle: "A replication-and-extension textbook using Walker et al. (2023)"
+  author: "Course scaffold"
+  date: today
+  chapters:
+    - index.qmd
+    - chapters/01-orientation.qmd
+    - chapters/02-r-workflow.qmd
+    - chapters/03-walker-paper.qmd
+    - chapters/04-data-cds.qmd
+    - chapters/05-replication.qmd
+    - chapters/06-title-ix-extension.qmd
+    - chapters/07-ai-workflow.qmd
+    - chapters/08-project.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    number-sections: true
+    code-fold: false
+    code-copy: true
+
+execute:
+  warning: false
+  message: false
+  freeze: auto
+

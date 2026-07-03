@@ -1,0 +1,41 @@
+# Orientation
+
+Replication is a way to learn how research actually works. It forces us to ask small, concrete questions:
+
+- What exact variable is the outcome?
+- What rows belong in the dataset?
+- What is the treatment group?
+- Which year is the reference year?
+- What should the figure look like if the code is correct?
+
+AI is useful in this workflow because it can draft code, explain unfamiliar functions, suggest data checks, and help write summaries. AI is also risky because it can invent sources, smooth over ambiguity, or produce code that runs while answering the wrong question.
+
+## Course rule
+
+Use AI as a research assistant, not as an authority. Every AI contribution needs a verification step.
+
+Good verification steps include:
+
+- Compare the AI answer to the paper.
+- Run the code on toy data where you know the expected result.
+- Check row counts after each join.
+- Read the source page or PDF yourself.
+- Save the prompt and the final verified answer in `prompts/ai_prompt_log_template.md`.
+
+## Repository map
+
+```text
+R/                         R scripts for cleaning, modeling, scraping, and merging
+data/                      toy data, policy status files, and generated analysis files
+data-raw/                  student-collected raw CDS and optional exemption files
+chapters/                  textbook chapters
+assignments/               student-facing assignments
+prompts/                   AI prompt log template
+results/                   generated figures and tables
+.github/workflows/         GitHub Pages rendering workflow
+```
+
+## A note on the word "exemptions"
+
+The Pregnant Scholar source used in this scaffold is a policy directory of family-responsive campus policies. If your class wants literal Title IX religious exemptions instead, use the optional template in `data/religious_exemptions_template.csv` and place the collected file at `data-raw/ocr_title_ix_religious_exemptions.csv`.
+
