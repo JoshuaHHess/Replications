@@ -1,8 +1,13 @@
-# R, AI, and Reproductive Policy
+# Replication Text
 
-This repository is a small student textbook for learning R, reproducible social science, and careful AI-assisted research.
+This repository is a small replication textbook for students learning R, reproducible social science, and careful AI-assisted research.
 
-The core project asks students to replicate Walker et al. (2023), "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants," and then extend the design with Title IX pregnancy and parenting policy information from The Pregnant Scholar policy directory.
+The first version has two rendered chapters:
+
+1. Introduction
+2. Walker
+
+The Walker chapter asks students to replicate Walker et al. (2023), "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants," and then extend the design with Title IX pregnancy and parenting policy information from The Pregnant Scholar policy directory.
 
 ## What students build
 
@@ -49,7 +54,12 @@ git push -u origin main
 
 Then open the repository on GitHub, go to Settings -> Pages, and choose GitHub Actions as the Pages source.
 
+## Notes for instructors
+
+The rendered book currently uses only `index.qmd`, `chapters/01-introduction.qmd`, and `chapters/02-walker.qmd`.
+
+Additional scaffold notes from the first draft live in `support/old-scaffold/`. They are intentionally outside the current book table of contents.
+
 ## License
 
 Course text is licensed CC BY 4.0. Code is licensed MIT. See `LICENSE.md`.
-

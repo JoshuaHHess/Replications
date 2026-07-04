@@ -1,0 +1,8 @@
+# Introduction
+
+Instructor draft space.
+
+This chapter will introduce the course, explain why replication is a good way to learn empirical research, and set expectations for using AI responsibly.
+
+For now, the book begins in earnest with Chapter 2, Walker.
+

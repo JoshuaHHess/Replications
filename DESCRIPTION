@@ -1,8 +1,8 @@
 Package: RAIReproductivePolicyTextbook
-Title: R, AI, and Reproductive Policy Teaching Project
+Title: Replication Text Teaching Project
 Version: 0.0.1
 Authors@R: person("Course", "Scaffold", role = c("aut", "cre"), email = "example@example.com")
-Description: Teaching materials and R scripts for replicating Walker et al. (2023) and extending the analysis with Title IX policy information.
+Description: Teaching materials and R scripts for a replication text that begins with Walker et al. (2023) and extends the analysis with Title IX policy information.
 License: MIT + file LICENSE.md
 Encoding: UTF-8
 Depends:
@@ -19,4 +19,3 @@ Imports:
     xml2,
     purrr,
     scales
-
