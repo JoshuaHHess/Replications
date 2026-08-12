@@ -6,8 +6,8 @@ Estimate the Walker event-study model and explain the 2022 coefficient.
 
 ## Submit
 
-- `data/analysis_applicants.csv`
-- `results/event_study_toy.csv` or your real-data equivalent
+- `exercises/01-walker/data/analysis_applicants.csv`
+- `exercises/01-walker/results/event_study_toy.csv` or your real-data equivalent
 - event-study figure
 - 400-600 word interpretation
 - AI prompt log

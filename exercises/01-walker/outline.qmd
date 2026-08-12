@@ -1,0 +1,49 @@
+# The Walker Paper
+
+# Get the Data
+
+1.  IPEDS -
+
+2.  Ranking?
+
+3.  Treatement
+
+# Data Visualization
+
+1.  pre and post treatment means
+
+2.  best signal example
+
+3.  what ols does
+
+    1.  motivate fixed effects
+
+# Estimate the Model
+
+1.  the event-study model and the Difference-in-difference estimator
+
+    1.  did is only formally identified when the parallel trends assumption holds, which is not testable
+
+    2.  did capture the att
+
+2.  the fixest package and the feols function
+
+3.  iplot, summary
+
+# Make Results
+
+1.  extracting results with tidy and making a plottable dataframe
+
+2.  ggplot
+
+# Extension
+
+1.  ranking and public v private
+
+    - because these are time-invariant, they are absorbed in fixed effects, but we can look at the difference between – facet_wrap
+
+    - use universe, rank by within-state prominence by instcat
+
+2.   include time-varying controls from UK Povety - is this problematic because of reverse-causality?
+
+3.  extend dates and use stacked event study (does Coady have a package)

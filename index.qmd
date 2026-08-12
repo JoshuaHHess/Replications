@@ -1,22 +1,12 @@
 # Replication Text
 
-This book teaches R, reproducible research, and AI-assisted empirical work through replication.
+This book teaches empirical replication for advanced undergraduates. Undergraduate econometrics is not required but strongly recommended.
 
-The first version starts with two chapters:
+Each unit is a short, self-contained replication exercise. Materials for each one — data, scripts, and the write-up — live together under `exercises/`.
 
-- Chapter 1, Introduction, is a placeholder for the instructor's framing.
-- Chapter 2, Walker, is the first replication unit.
+- Chapter 1, Introduction, frames the course and how AI may be used.
+- `exercises/01-walker/` is the first replication exercise, built around Walker et al. [-@walker2023anticipatory].
 
-The Walker unit uses Walker et al. [-@walker2023anticipatory], a short paper estimating whether the anticipated repeal of *Roe v. Wade* changed the share of female applicants to selective colleges in states where abortion was banned or restricted after *Dobbs*. Students rebuild the research design, learn the R workflow, and then extend the analysis with Title IX pregnancy and parenting policy information from The Pregnant Scholar policy directory [@pregnantscholar_policy].
+## Workflow
 
-## What Students Practice
-
-- Turning a published paper into a replication plan.
-- Building a clean R project with raw data, scripts, outputs, and documentation.
-- Estimating a fixed-effects event-study model.
-- Using AI to speed up coding and source extraction while still checking the work.
-- Writing about what replicates, what does not, and why.
-
-## Background Notes
-
-Earlier scaffold material is stored under `support/old-scaffold/`. Those files are not part of the rendered book right now, but they preserve useful notes on R workflow, data collection, AI use, and the Title IX extension.
+For each exercise: do the replication first, then write it up. The write-up should be short.

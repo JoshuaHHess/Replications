@@ -1,22 +1,15 @@
 # Replication Text
 
-This repository is a small replication textbook for students learning R, reproducible social science, and careful AI-assisted research.
+This repository is a small online text of replication exercises for advanced undergraduates. Undergraduate econometrics is recommended but not required.
 
-The first version has two rendered chapters:
+Each exercise is short and self-contained, living under `exercises/<NN-name>/` with its own data, R scripts, and write-up. The workflow for each one: do the replication first, then write it up.
 
-1. Introduction
-2. Walker
+The first version has:
 
-The Walker chapter asks students to replicate Walker et al. (2023), "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants," and then extend the design with Title IX pregnancy and parenting policy information from The Pregnant Scholar policy directory.
+1. Introduction (`chapters/01-introduction.qmd`)
+2. Exercise 1: Walker (`exercises/01-walker/`) - replicate Walker et al. (2023), "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants," then extend the design with Title IX pregnancy and parenting policy information from The Pregnant Scholar policy directory.
 
-## What students build
-
-- A cleaned Common Data Set applicant panel for 2018-2022.
-- An event-study/difference-in-differences replication of the Walker paper.
-- A reproducible extension that merges campus Title IX pregnancy/parenting policy indicators.
-- A short audit trail showing how AI was used, checked, and corrected.
-
-The repository includes toy data so the R scripts run immediately. The toy data are not the Walker data and should not be used as evidence. Students replace them with their collected CDS panel in `data-raw/walker_cds_applicants.csv`.
+Exercise 1 is currently an empty shell (`exercises/01-walker/data/`, `data-raw/`, `R/`, `results/`) waiting on the replication itself.
 
 ## Quick start
 
@@ -25,8 +18,6 @@ install.packages(c(
   "readr", "dplyr", "tidyr", "stringr", "ggplot2",
   "fixest", "broom", "rvest", "xml2", "purrr", "scales"
 ))
-source("R/run_replication_template.R")
-source("R/merge_title_ix_extension.R")
 ```
 
 ## Render the textbook
@@ -56,9 +47,9 @@ Then open the repository on GitHub, go to Settings -> Pages, and choose GitHub A
 
 ## Notes for instructors
 
-The rendered book currently uses only `index.qmd`, `chapters/01-introduction.qmd`, and `chapters/02-walker.qmd`.
+The rendered book currently uses `index.qmd`, `chapters/01-introduction.qmd`, and `exercises/01-walker/exercise.qmd`.
 
-Additional scaffold notes from the first draft live in `support/old-scaffold/`. They are intentionally outside the current book table of contents.
+To add a new exercise, create `exercises/<NN-name>/` with its own `data/`, `data-raw/`, `R/`, `results/`, and an `exercise.qmd`, then add that `exercise.qmd` to the `chapters` list in `_quarto.yml`.
 
 ## License
 
