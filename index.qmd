@@ -1,0 +1,12 @@
+# Replication Text
+
+This book teaches empirical replication for advanced undergraduates. Undergraduate econometrics is not required but strongly recommended.
+
+Each unit is a short, self-contained replication exercise. Materials for each one — data, scripts, and the write-up — live together under `exercises/`.
+
+- Chapter 1, Introduction, frames the course and how AI may be used.
+- `exercises/01-walker/` is the first replication exercise, built around Walker et al. [-@walker2023anticipatory].
+
+## Workflow
+
+For each exercise: do the replication first, then write it up. The write-up should be short.
