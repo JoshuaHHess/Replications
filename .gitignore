@@ -3,6 +3,7 @@
 .Rproj.user/
 _site/
 /.quarto/
+.DS_Store
 exercises/*/data-raw/*.csv
 exercises/*/data-raw/*.xlsx
 exercises/*/data-raw/*.pdf

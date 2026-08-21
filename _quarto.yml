@@ -10,7 +10,6 @@ book:
   chapters:
     - index.qmd
     - chapters/01-introduction.qmd
-    - exercises/01-walker/exercise.qmd
 
 bibliography: references.bib
 
