@@ -17,7 +17,7 @@ Open RStudio, not R directly, for everything in this book.
 
 Git is a program that helps keep track of your code changes. It's a bit like "track changes" in microsoft word, but much more useful. GitHub hosts this on the cloud so that you can recover your work if you accidentally delete something, your machine dies, or if you want your partner to get the most recent version.
 
-Honestly, Git and GitHub are **not** easy to wrap your head around. But, once you get it set up and you get in the habit of 'commits' and 'pushes' you'll find it useful. I
+Honestly, Git and GitHub are **not** easy to wrap your head around. But, once you get it set up and you get in the habit of 'commits' and 'pushes' you'll find it useful. 
 
 1.  Sign up at [github.com](https://github.com).
 2.  Turn on two-factor authentication (Settings → Password and authentication).
@@ -84,7 +84,7 @@ your-exercise/
     Run All           this script uses "source" to run everything
     data processing/  these scripts will import, merge, and clean data
     analysis/         these scripts will generate figures and tables (what you will put in "Results")
-    descriptives/     these scripts will make 
+    descriptives/     these scripts describe the data or aid introduction/conclusion
   R/
   results/                 
     figures/            analysis scripts will save figures to here
