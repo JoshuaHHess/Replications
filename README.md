@@ -4,21 +4,11 @@ This repository is a small online text of replication exercises for advanced und
 
 Each exercise is short and self-contained, living under `exercises/<NN-name>/` with its own data, R scripts, and write-up. The workflow for each one: do the replication first, then write it up.
 
-The first version has:
+The book currently has:
 
-1. Introduction (`chapters/01-introduction.qmd`)
-2. Exercise 1: Walker (`exercises/01-walker/`) - replicate Walker et al. (2023), "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants," then extend the design with Title IX pregnancy and parenting policy information from The Pregnant Scholar policy directory.
+1. Introduction (`chapters/01-introduction.qmd`) - setting up R, RStudio, GitHub, and a project folder structure.
 
-Exercise 1 is currently an empty shell (`exercises/01-walker/data/`, `data-raw/`, `R/`, `results/`) waiting on the replication itself.
-
-## Quick start
-
-```r
-install.packages(c(
-  "readr", "dplyr", "tidyr", "stringr", "ggplot2",
-  "fixest", "broom", "rvest", "xml2", "purrr", "scales"
-))
-```
+Exercise chapters are added one at a time, after the replication itself is done. The first planned exercise replicates Walker et al. (2023), "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants" (see the separate `Walker/` folder in this repo for that work in progress).
 
 ## Render the textbook
 
@@ -47,7 +37,7 @@ Then open the repository on GitHub, go to Settings -> Pages, and choose GitHub A
 
 ## Notes for instructors
 
-The rendered book currently uses `index.qmd`, `chapters/01-introduction.qmd`, and `exercises/01-walker/exercise.qmd`.
+The rendered book currently uses `index.qmd` and `chapters/01-introduction.qmd`, listed in `_quarto.yml`.
 
 To add a new exercise, create `exercises/<NN-name>/` with its own `data/`, `data-raw/`, `R/`, `results/`, and an `exercise.qmd`, then add that `exercise.qmd` to the `chapters` list in `_quarto.yml`.
 
