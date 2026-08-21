@@ -1,7 +1,0 @@
-# Walker
-
-Write-up in progress.
-
-This exercise asks students to replicate Walker et al. [-@walker2023anticipatory], "Anticipatory impacts of the repeal of Roe v. Wade on female college applicants," then extend it with Title IX pregnancy/parenting policy data from The Pregnant Scholar [-@pregnantscholar_policy].
-
-Notes and data for this exercise live alongside this file in `exercises/01-walker/`.

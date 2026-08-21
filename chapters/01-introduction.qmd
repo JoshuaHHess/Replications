@@ -1,8 +1,63 @@
 # Introduction
 
-Instructor draft space.
+This book teaches empirical replication through short, self-contained exercises. Each one asks you to rebuild a published paper's results, then write up what replicated, what didn't, and why. Undergraduate econometrics is recommended but not required.
 
-This chapter will introduce the course, explain why replication is a good way to learn empirical research, and set expectations for using AI responsibly.
+Before the first exercise, get your tools set up. Do this once, carefully, and every exercise after this one starts from the same foundation.
 
-For now, the book begins in earnest with Chapter 2, Walker.
+## Install R and RStudio
 
+R and RStudio are two different pieces of software. R is the actual programming language; RStudio is an interface that makes R easier to work with. Install them in that order.
+
+1. Install R from [cran.r-project.org](https://cran.r-project.org). Choose your operating system and take the latest release.
+2. Install RStudio Desktop (free) from [posit.co/download/rstudio-desktop](https://posit.co/download/rstudio-desktop). RStudio will find your R installation automatically.
+
+Open RStudio, not R directly, for everything in this book.
+
+## Create a GitHub Account
+
+GitHub hosts your work and gives you version history — a record of every change you made and when, which matters for a course built around reproducibility.
+
+1. Sign up at [github.com](https://github.com).
+2. Turn on two-factor authentication (Settings → Password and authentication).
+3. GitHub no longer accepts your account password for pushing code from your computer. You'll need a personal access token instead — Settings → Developer settings → Personal access tokens → Generate new token (classic) works fine for this course. Save it somewhere you can find it; you'll be asked for it the first time you push from a new machine, in place of a password.
+
+## Set Up a Folder Structure
+
+Before creating anything in RStudio, decide how you'll organize files. Consistency across exercises will save you time later. This book uses the same structure for every exercise:
+
+```
+your-exercise/
+  data/
+    original data/     raw files exactly as downloaded, never edited by hand
+    saved data/         cleaned data your scripts produce
+  scripts/               (or R/) all your .R files
+  results/               figures and tables your scripts produce
+  README.md              what this project is and how to run it
+```
+
+The core idea: raw data is read-only. If a script needs to change something about the data, it reads from `original data/`, transforms it, and writes the result to `saved data/` — it never edits the original file in place. That way you can always regenerate everything from scratch and trust that the raw data hasn't quietly drifted from what you originally downloaded.
+
+## Create a Project
+
+In RStudio: **File → New Project → New Directory → New Project**. Name it and choose where to save it — this should be the folder structure you just planned.
+
+Creating a project adds a `.Rproj` file to that folder. This does two things worth understanding: it fixes your working directory to that folder (so file paths in your scripts can be relative, like `"data/original data/file.csv"`, instead of a full path that only works on your computer), and it keeps RStudio settings specific to that project. Always open your work by double-clicking the `.Rproj` file, not by opening a random `.R` script — that's what keeps the relative paths working.
+
+## Link the Project to a GitHub Repository
+
+There are two ways to connect a project to GitHub; either works.
+
+**Starting on GitHub:** Create a new repository on github.com first (choose whether it's public or private). Then in RStudio, **File → New Project → Version Control → Git**, and paste the repository's URL. RStudio clones it and sets up the project for you, already connected.
+
+**Starting in RStudio:** If you already created the project as described above, check the "Create a git repository" box when you set it up (or turn it on later via **Tools → Project Options → Git/SVN**). This starts version tracking locally, but doesn't connect to GitHub yet — for that, create an empty repository on github.com, then from a terminal inside your project run:
+
+```bash
+git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
+git push -u origin main
+```
+
+Either way, once it's connected, RStudio's **Git** tab (top right pane) is where you'll do most of your version control: check boxes next to changed files, write a commit message, click **Commit**, then **Push** to send it to GitHub.
+
+## A Note on AI
+
+AI is allowed throughout this book, but you are responsible for everything you submit. Good uses include explaining unfamiliar code, drafting a check for missing data, or debugging an error message. Bad uses include letting AI invent a number you can't verify, or accepting an explanation you can't independently confirm is correct. When in doubt, keep a short log of what you asked, what you got, and how you checked it.
