@@ -1,0 +1,130 @@
+# @walker2023anticipatory
+
+This chapter walks through a replication of @walker2023anticipatory, which asks whether the anticipated repeal of *Roe v. Wade* changed the share of female freshman applicants at selective U.S. universities, comparing states where abortion became banned to states where it remained legal.
+
+Walker, B., Wisniewski, J., Torres, J., & Sharma, R. (2023). Anticipatory impacts of the repeal of Roe v. Wade on female college applicants. *Economics Letters*, 233, 111379. <https://doi.org/10.1016/j.econlet.2023.111379> ([PDF](files/walker2023anticipatory.pdf))
+
+# The Paper
+
+Read the paper ([PDF](files/walker2023anticipatory.pdf)). First, notice how the authors methodically address the four questions of scientific inquiry:
+
+1.  Why did we do this? – *Introduction*
+
+2.  How did we do this? – *Methods*
+
+3.  What did we find? – *Results*
+
+4.  What does it mean? – *Discussion and conclusion*
+
+Also note the *Methods* section has two subsections: *Data* and *Empirical approach*. Their data comes from the Common Data Set (CDS) and collected by hand where necessary. This replication exercise will use a similar panel from IPEDS, a public data source that gets us most of the way there with far less manual data entry. Second, notice how the results are presented. The empirical approach is the so-called two-way fixed effects (TWFE) model. It's shown in Equation 1 and replicated here.
+
+$$Y_{ijt} = \sum_{t = -3 \\ t \neq 0}^{t = +1} \left(\alpha_{ijt} \cdot Repeal_j \cdot Year(t) \right) + \tau_t + \delta_i + \varphi_j$$
+
+You'll need to have an understanding of this equation to understand how the results are presented in the paper. So, let's re-write this equation to be more explicit. Let's call the outcome variable *Share* and be explicit that time runs from 2018 to 2022.
+
+$$Share_{ijt} = \sum_{t = 2018 \\ t \neq 2021}^{t = 2022} \left(\alpha_{ijt} \cdot Repeal_j \cdot Year(t) \right) + \tau_t + \delta_i + \varphi_j$$
+
+Now, let's write out the terms buried in the summation. Instead of one compact term with a $t$ running underneath it, write one term per year, leaving out 2021 — that's the reference year everything else gets compared to, which is why $t \neq 2021$ appears under the summation above.
+
+$$\begin{aligned}
+Share_{ijt} = \; & \alpha_{2018} \cdot Repeal_j \cdot Year_{2018} \\
++ \; & \alpha_{2019} \cdot Repeal_j \cdot Year_{2019} \\
++ \; & \alpha_{2020} \cdot Repeal_j \cdot Year_{2020} \\
++ \; & \alpha_{2022} \cdot Repeal_j \cdot Year_{2022} \\
++ \; & \tau_t + \delta_i + \varphi_j
+\end{aligned}$$
+
+$Repeal_j$ is an indicator (sometimes called dummy) variable. Indicator variables only have two values, 1 or 0, and indicate whether a given observation belongs to a particular category. $Repeal_j$ is 1 if state $j$ will be affected by the repeal of Roe v. Wade and a 0 otherwise. For example, Arkansas had a "trigger law" that would ban abortions if Roe v. Wade was overturned so that $Repeal_{j = AR} = 1$ and Colorado had legal protections in place ensuring access meaning $Repeal_{j = CO} = 0$.
+
+The goal of the paper is to understand the effect of $Repeal_j = 1$ on the women's share of college applications – $Share_{ijt}$. It is sometimes useful to think about how you would answer a question as an all-powerful, amoral being. In that universe, you would create 100 identical schools, scatter them randomly throughout identical states, and then randomly select some of those states to be affected by the policy and observe changes in $Share_{ijt}$. You would expect there to be no real difference between the schools until the policy effects kick in and then some change – if the policy does matter. That is precisely what the $\alpha$'s capture!
+
+To see that, let's do something we really shouldn't, take some derivatives. It's not mathematically correct to take a derivative of an indicator variable since it's not a continuous function. But, the intuition comes through and that's what matters now.
+
+The change in $Share_{ijt}$ with respect to $Repeal_j$ can be thought of as the partial derivative.
+
+$$\frac{\partial Share_{ijt}}{\partial Repeal_j} =  \alpha_{2018}\cdot Year_{2018} +  \alpha_{2019}  \cdot Year_{2019} +  \alpha_{2020} \cdot Year_{2020} +  \alpha_{2022}  \cdot Year_{2022} $$
+
+The $Year$ variables are also indicators that are 1 in the subscripted year and 0 otherwise. That means, change in $Share_{ijt}$ with respect to $Repeal_j$ in 2018 is
+
+$$\frac{\partial Share_{ijt}}{\partial Repeal_j} \big\vert_{Year = 2018} =  \alpha_{2018}\cdot 1 +  \alpha_{2019}  \cdot 0 +  \alpha_{2020} \cdot 0 +  \alpha_{2022}  \cdot 0 =  \alpha_{2018}$$
+
+So, our interpretation of the $\alpha$'s is they estimate the change in $Share_{ijt}$ for an affected school relative to a non-affected school relative to 2021. If the schools are the same except for the impact of $Repeal$ then there should be no change in the years leading up to *Dobbs*.
+
+$$  
+\alpha_{2018} =  \alpha_{2019} = \alpha_{2020}  =  0$$
+
+This is often referred to as the parallel trends assumption.
+
+::: {.callout-note appearance="simple"}
+## Parallel Trends Assumption
+
+In the absence of treatment, the difference between the ‘treatment’ and ‘control’ group is constant over time.
+:::
+
+In this context, the difference between $Repeal = 1$ and $Repeal = 0$ is constant until they are treated.
+
+Importantly, we can't test whether or not this is true. Instead, researchers often just plot the $\alpha$'s and let the reader judge whether or not the assumption appears to hold. This plot is called an *event study*.
+
+Hopefully, this exposition helps you to understand the *Results* section. Table 3 shows the estimated $\alpha$'s, the standard error of the estimates, the associated confidence interval, and the p-value. The *event study* is shown in Figure 1. The estimated coefficients in 2018, 2019, and 2020 are positive but pretty small. Also, the plotted 95% confidence interval touches the zero line. That means that, statistically, those estimates are no different than zero which suggests the parallel trends assumption holds. The estimated coefficient in 2022 is -0.009 and the 95% confidence interval doesn't touch zero.
+
+# Replication
+
+## Set Up
+
+### Set up the file structure
+
+### Create a Project
+
+### Make a GitHub Repo 
+
+do the first commit and make some notes about commit messages
+
+## Data
+Two parts: 1) get the data and put in original data folder - probably want each IPEDS survey in a named folder; 2) process the data into a usable dataframe to be called into analysis
+### Original Data
+Download raw data from IPEDS
+
+### Data Processing
+model estimating routines rely on one, long-format (what is this), data frame (what is this). This means we have three main tasks: 1)import the raw data and merge it into a df; 2)define/create the variables if they don't exist; 3) clean the data
+
+once we've done that, we'll save the df to a folder so that we can clean the environment frequently during analyisis
+
+#### Import Raw Data
+
+could be done by making df for each year then binding rows
+
+easier to loop
+
+looping is easier with purrr
+
+join surveys -- brief talk about joins
+
+#### Make Variables
+Best practice is to divide this into outcome, policy, and control variables
+outcome variables -- make women share and out of state share
+policy variables -- get from paper, have to merge on STABBR
+control variables -- walker has no controls, should they?
+
+#### Clean Data
+here we try to match the walker data set and there's not much
+
+## Analysis
+try to write about what the fixed effects do using real example from the data
+
+run an feols model
+check with summary
+check with iplot
+
+make a pretty event study: tidy the model and make a df that can be passed to ggplot
+ggsave the output
+
+
+## Results
+Turn this into a beamer presentation using quarto
+
+
+
+
+
+
+

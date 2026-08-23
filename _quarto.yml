@@ -10,6 +10,7 @@ book:
   chapters:
     - index.qmd
     - chapters/01-introduction.qmd
+    - chapters/walker.qmd
 
 bibliography: references.bib
 
