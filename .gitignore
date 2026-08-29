@@ -13,5 +13,5 @@ exercises/*/results/*.png
 exercises/*/results/*.csv
 !exercises/*/results/.gitkeep
 !exercises/*/R/.gitkeep
-
 **/*.quarto_ipynb
+Walker
