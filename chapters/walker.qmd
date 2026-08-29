@@ -4,7 +4,7 @@ This chapter walks through a replication of @walker2023anticipatory, which asks 
 
 Walker, B., Wisniewski, J., Torres, J., & Sharma, R. (2023). Anticipatory impacts of the repeal of Roe v. Wade on female college applicants. *Economics Letters*, 233, 111379. <https://doi.org/10.1016/j.econlet.2023.111379> ([PDF](files/walker2023anticipatory.pdf))
 
-# The Paper
+## The Paper
 
 Read the paper ([PDF](files/walker2023anticipatory.pdf)). First, notice how the authors methodically address the four questions of scientific inquiry:
 
@@ -56,7 +56,7 @@ $$
 This is often referred to as the parallel trends assumption.
 
 ::: {.callout-note appearance="simple"}
-## Parallel Trends Assumption
+### Parallel Trends Assumption
 
 In the absence of treatment, the difference between the ‘treatment’ and ‘control’ group is constant over time.
 :::
@@ -67,64 +67,135 @@ Importantly, we can't test whether or not this is true. Instead, researchers oft
 
 Hopefully, this exposition helps you to understand the *Results* section. Table 3 shows the estimated $\alpha$'s, the standard error of the estimates, the associated confidence interval, and the p-value. The *event study* is shown in Figure 1. The estimated coefficients in 2018, 2019, and 2020 are positive but pretty small. Also, the plotted 95% confidence interval touches the zero line. That means that, statistically, those estimates are no different than zero which suggests the parallel trends assumption holds. The estimated coefficient in 2022 is -0.009 and the 95% confidence interval doesn't touch zero.
 
-# Replication
+## Replication
 
-## Set Up
+We are going to replicate @walker2023anticipatory using IPEDS data.
 
-### Set up the file structure
+1.  Why did we do this? – *Introduction: replication is an important part of the scientific process.*
 
-### Create a Project
+2.  How did we do this? – *Methods: we use IPEDS data and the same econometric approach as @walker2023anticipatory.*
 
-### Make a GitHub Repo 
+3.  What did we find? – *Results: This will be displayed as a table of coefficients and event study figures.*
 
-do the first commit and make some notes about commit messages
+4.  What does it mean? – *Discussion and conclusion: This depends on how close our results are to @walker2023anticipatory.*
 
-## Data
-Two parts: 1) get the data and put in original data folder - probably want each IPEDS survey in a named folder; 2) process the data into a usable dataframe to be called into analysis
-### Original Data
-Download raw data from IPEDS
+### Set Up
 
-### Data Processing
-model estimating routines rely on one, long-format (what is this), data frame (what is this). This means we have three main tasks: 1)import the raw data and merge it into a df; 2)define/create the variables if they don't exist; 3) clean the data
+#### Set up the file structure
 
-once we've done that, we'll save the df to a folder so that we can clean the environment frequently during analyisis
+Make a new folder called *walker* (you can call it whatever you like but I'm going to refer to *walker* in this text). Inside that folder, create the following folders: *data*, *scripts*, *results*, *R*. You can go further and make the sub-folders we discussed in Chapter 1, or add them later.
 
-#### Import Raw Data
+#### Create a Project
 
-could be done by making df for each year then binding rows
+R doesn't really know *where* things are. Later, you are going to want to read in data from something you downloaded. Maybe you put a file called `enrollment.csv` in your *data* folder. It would be nice to write `read.csv("data/enrollment.csv)"`. Unfortunately, R doesn't natively know to look in *walker* folder to find the *data* folder. You'd either need to set the working directory or use the full path name like `read.csv("/Users/my-name/Desktop/Economics/Walker/data/enrollment.csv")`, and this code probably wouldn't run on another machine (the path would be different). A project solves this by making one folder the home base for your work. When you open the `.Rproj` file, RStudio automatically starts inside that folder. Then your code can use simple paths.
 
-easier to loop
+So, make the top level folder into a project. In Rstudio, go **File → New Project → New Directory → New Project**, pointed at the folder structure you just built.
 
-looping is easier with purrr
+#### Make a GitHub Repo
 
-join surveys -- brief talk about joins
+I'll note that this task is something a basic AI model should be able to help you with.
 
-#### Make Variables
-Best practice is to divide this into outcome, policy, and control variables
-outcome variables -- make women share and out of state share
-policy variables -- get from paper, have to merge on STABBR
-control variables -- walker has no controls, should they?
+Now, we are going to connect the project to GitHub. First, create an empty an empty repository with a sensible name and a reasonable description. Once the repo has been created, you'll see there's a url for the remote repository. You'll need that to connect it to the project in R.
 
-#### Clean Data
-here we try to match the walker data set and there's not much
+Open your project. Go to the top level folder you initialized - *walker* - and look for the file with the `.Rproj` extension. Click on that. Once the project is open, go into **Tools → Project Options → Git/SVN** and enable version control with Git. The project may want to restart, which is fine.
 
-## Analysis
-try to write about what the fixed effects do using real example from the data
+In the upper right of your Rstudio viewer, you should see a pane with several tabs. The first one is usually **Environment**. You should now see one called **Git**. Git really is an amazing tool! Rstudio brings only a little bit of it's functionality into that pane. The next step is something Rstudio can't do for you and that is adding the remote. You'll need to type something like the following into the **Terminal** tab at the bottom of your Rstudio viewer.
 
-run an feols model
-check with summary
-check with iplot
+``` bash
+git remote add origin https://github.com/you/repo.git
+```
 
-make a pretty event study: tidy the model and make a df that can be passed to ggplot
-ggsave the output
+Make your first commit right after this — before you've downloaded a single file or written a line of code. An empty folder skeleton is a perfectly good thing to commit; it gives you a clean baseline to compare everything else against.
 
+A quick note on commits. Science is a bit of a wander. Commits are snapshots of your journey. You are going to take a wrong turn and end up somewhere you don't want to be. Commits are how you backtrack. You want to commit frequently enough that you can identify that happy place. Committing too much makes your Git History a little noisy, but it's much, much better than committing too little. Also, commits require a message. Since you are making lots of commits, you can usually keep the messages short.
 
-## Results
-Turn this into a beamer presentation using quarto
+Best practices:
 
+- Write in the imperative like you are telling the commit what to do - "add enrollment data" not "adding enrollment data".
 
+- Write what changed and why - Git will track who changed what file and when so you need to explain the content: "switch outcome to percent" not "edit script".
 
+- One logical change per commit. If you fixed a bug and ran a new analysis, that is two commits, not one.
 
+- Don't be vague. It's tempting, especially when you are going fast, to give something like "update main.R" but that is NOT going to help you when you are trying to get back to the happy place.
 
+### Data
 
+Two parts: get the raw data into `original data/`, then process it into one usable dataframe for analysis.
 
+#### Original Data
+
+Download the following, each into its own folder:
+
+- **Admissions (ADM)**, 2018–2022 — applicant, admit, and enrolled counts by sex. This is the source for the outcome variable.
+- **Header/Institutional Characteristics (HD)** — gives you each institution's name, state, and sector, so you can identify and filter schools.
+- **Fall Enrollment, Residence and Migration (EF-C)** — enrolled students' state of residence at the time of application. You'll only need this later, for the out-of-state extension, but it's easiest to grab it now while you're already on the IPEDS site.
+- **USNWR rankings** — used to pick the top-100 sample, same as the original paper.
+- **State abortion-ban status** — a list of which states banned abortion and when. This isn't an IPEDS survey; you'll need to build or find this table yourself and cite where it came from in your write-up.
+
+Download everything exactly as it comes from the source. Don't rename columns, don't delete rows you don't need yet — that happens later, in scripts, where it's visible and reversible.
+
+#### Data Processing
+
+The model you'll estimate expects one long-format dataframe. *Long format* means one row per institution-year — the same institution appears on multiple rows, one for each year, rather than having separate columns like `share_2018`, `share_2019`, etc. This is what `feols()` and almost every other R modeling function expects.
+
+Getting there is three tasks: import the raw files and merge them into one dataframe, create the variables you actually need, and clean the result down to your final sample. Once you have that single clean dataframe, save it to `data/saved data/` — from then on, your analysis scripts can just load that one file instead of re-running the import every time, which makes it much easier to clear your environment and start fresh when you're working on the model itself.
+
+##### Import Raw Data
+
+The most explicit way to do this is to read each year's file separately and stack them with `bind_rows()` — you did something like this already for the ADM data. It works, but it's repetitive: the same five lines, once per year, with only the year changing.
+
+A loop removes the repetition. The tidyverse way to loop over files is `purrr::map_dfr()`, which reads each file, applies whatever you tell it to, and stacks the results into one dataframe automatically:
+
+``` r
+adm_files <- list.files("data/original data/IPEDS/ADM", full.names = TRUE)
+
+adm <- map_dfr(adm_files, read_csv)
+```
+
+Once each survey (ADM, HD, EF-C) is its own clean dataframe, join them together on `UNITID` — the institution ID IPEDS uses consistently across every survey — with `left_join()`. Use a left join starting from whichever dataframe defines your sample (ADM, since that's your outcome variable) so you don't accidentally drop institutions just because they're missing from a survey you joined in later.
+
+##### Make Variables
+
+Split this into three kinds of variables, and build them in that order:
+
+- **Outcome variables** — the female applicant share (`women_share`), and later, the out-of-state enrollment share for the extension.
+- **Policy variables** — which states banned abortion. This doesn't come from IPEDS; merge it in using `STABBR`, the state abbreviation.
+- **Control variables** — the original paper doesn't use any. Should you add any anyway? Worth thinking through before you decide either way — and worth explaining your reasoning in the write-up regardless of which way you land.
+
+##### Clean Data
+
+Restrict your sample to match the paper as closely as you can: the top-100 ranked schools, 2018–2022. There isn't much more to do here beyond that filtering step and making sure your variable names are consistent going into the analysis.
+
+### Analysis
+
+Before you run anything, it's worth understanding *why* the model needs three separate fixed effects, not just trusting the output once it runs.
+
+If you estimated the relationship between $Repeal_j$ and $Share_{ijt}$ with plain OLS — no fixed effects at all — the result would be contaminated by omitted variable bias. Suppose, just for illustration, that women's colleges happen to be somewhat more common in states that didn't ban abortion. Women's colleges also have a much higher female applicant share for reasons that have nothing to do with any 2022 policy. Without fixed effects, that persistent, pre-existing difference would get folded into the estimated effect of $Repeal_j$ — it would look like the ban caused a gap that was actually there all along.
+
+Fixed effects fix this by *de-meaning*: subtracting each group's own average from every observation in that group, so the model compares observations within a group instead of across fundamentally different groups. Concretely, in this model:
+
+- $\delta_i$, the **institution fixed effect**, subtracts each school's own average $Share$ across all five years. After that subtraction, a women's college isn't "higher than average" anymore — what's left is that school's own deviation from its own typical value. This is what lets the model compare a school to itself over time, instead of to a fundamentally different kind of school.
+- $\tau_t$, the **year fixed effect**, subtracts the average $Share$ across every school in a given year. This absorbs anything that shifted applications everywhere at once in a particular year — a nationwide move toward test-optional admissions, say, or a post-pandemic surge in applications — so a shock common to every school doesn't get mistaken for a state-specific policy effect.
+- $\varphi_j$, the **state fixed effect**, subtracts each state's own average, absorbing whatever is persistently different about one state versus another that has nothing to do with the ban itself — regional draw, in-state tuition policy, or anything else that's roughly constant about that state across the whole sample.
+
+Once all three are removed, whatever variation is left is how one specific school, in one specific state, deviated from its own norm in one specific year — after already stripping out whatever every school did that year and whatever was persistently true of its state. That's the variation the $\alpha$'s are estimated from. Look at your own data for a school or two and see if you can spot both the institution-level and year-level patterns before moving on.
+
+Estimate the model with `fixest::feols()`, using `i()` to build the year-by-treatment interactions instead of typing each one out by hand:
+
+``` r
+model <- feols(
+  women_share ~ i(year, repeal, ref = 2021) | UNITID + STABBR + year,
+  cluster = ~STABBR,
+  data = df
+)
+
+summary(model)
+iplot(model)
+```
+
+`iplot()` gives you a quick, unstyled event-study plot straight from the model — good for checking your results as you go. For anything you'll put in the README or write-up, tidy the model's output into a plain dataframe with `broom::tidy()`, then build the plot yourself in `ggplot2` so you control the labels, theme, and reference line. Save it with `ggsave()` to `results/figures/`.
+
+### Results
+
+Assemble your figures and summary statistics into the README, the same way the Walker project's README does it. As an optional stretch goal, Quarto can also turn a `.qmd` file into a slide deck by setting `format: beamer` (or `format: revealjs` for HTML slides) — if you want practice presenting results instead of just writing them up, that's worth trying once your figures are done.
