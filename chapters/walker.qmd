@@ -121,21 +121,56 @@ Best practices:
 
 ### Data
 
-Two parts: get the raw data into `original data/`, then process it into one usable dataframe for analysis.
+The ultimate goal is to create a dataframe that can be passed into regression functions. The sub-tasks are:
+
+1.  Get the data
+2.  Merge the data
+3.  Make the variables
+4.  Clean the data
+
+First, let's get the data. To keep with the workflow-focused structure, we can think of this as filling up the original data folder.
 
 #### Original Data
+
+Whereas @walker2023anticipatory used Common Data Set for their analysis, we will use IPEDS (the Integrated Postsecondary Education Data System) data.
+
+IPEDS is the federal government's core dataset on U.S. colleges and universities, collected annually by the National Center for Education Statistics (NCES). Every institution that participates in federal student aid programs is required to report to it, so unlike a lot of survey data, it's close to a full census of U.S. higher education rather than a sample. It's organized into separate "survey components" — admissions, enrollment, finances, and so on — each downloadable as its own file by year.
+
+The complete IPEDS data files can be found here: <https://nces.ed.gov/ipeds/datacenter/DataFiles.aspx?gotoReportId=7&fromIpeds=true&sid=19caa67a-eb30-422f-86b4-7dea5a6738c4&rtid=7>
+
+If you go to the site, you'll see they have a lot of surveys and it doesn't seem immediately obvious what you want. Each survey has a *Dictionary* you can download that explains the variables. Going through them one by one to find what you want would be a laborious process. However, because IPEDS is well documented, most large language models (LLMs) — what we think of as AI — know a lot about it and you don't need an advanced model to find out exactly what you need to survey.
 
 Download the following, each into its own folder:
 
 - **Admissions (ADM)**, 2018–2022 — applicant, admit, and enrolled counts by sex. This is the source for the outcome variable.
 - **Header/Institutional Characteristics (HD)** — gives you each institution's name, state, and sector, so you can identify and filter schools.
 - **Fall Enrollment, Residence and Migration (EF-C)** — enrolled students' state of residence at the time of application. You'll only need this later, for the out-of-state extension, but it's easiest to grab it now while you're already on the IPEDS site.
-- **USNWR rankings** — used to pick the top-100 sample, same as the original paper.
-- **State abortion-ban status** — a list of which states banned abortion and when. This isn't an IPEDS survey; you'll need to build or find this table yourself and cite where it came from in your write-up.
+
+We'll also need **U.S. News & World Report college rankings**. Fortunately, there's a GitHub repo for that: <https://github.com/frishberg/Archive-of-US-News-College-Rankings>. You should be able to download an excel (.xlsx) file. You may want to note the day you downloaded it for citation purposes.
+
+Now we need **State abortion-ban status**. The easiest way to construct this to drop the @walker2023anticipatory pdf into AI and ask it to generate an excel file of Table 1. Make sure to insist there's a state abbreviation column and a column indicating if the state is "in sample".
 
 Download everything exactly as it comes from the source. Don't rename columns, don't delete rows you don't need yet — that happens later, in scripts, where it's visible and reversible.
 
 #### Data Processing
+
+The goal of this is a single dataframe that will be saved in a folder (I use `data\saved data`) that can be imported at the beginning of the analysis scripts. More on that later.
+
+Data processing has three main steps — merge the data, create the variables, and clean the data — that are done with code written in scripts. So, make a folder in scripts called **data processing** and open a new R script.
+
+I'm not going to assume you know anything about R, so I'll use this step to introduce some key ideas and concepts.
+
+One of the big challenges in writing scripts is *readability*. You want to write something that a human can understand as easily as possible. Two little habits that go a very, very long way are sections and comments. Both sections and comments rely on `#` which tells the machine to ignore whatever follows on that line. Sections are comments ending with four or more dashes or equals signs. You can run all the code in a section (Code –\> Run Region –\> Run Code Section), fold/collapse a section, and jump to section headers using the pane between your script and the console. Within sections, use (lots of) comments to explain the code in detail.
+
+##### Import Raw Code
+
+Let's start by importing the data containing applications. The easiest way to do this is to navigate to your data in the Files pane of Rstudio and click on it. Rstudio will offer to import the data for you, but that's not reproducible. Instead, copy the code and paste it into your script.
+
+```{r}
+adm2017_rv <- read_csv("Walker/data/original data/IPEDS/ADM/adm2017_rv.csv")
+```
+
+Now, if you try to run this line it probably will show you an error saying it couldn't find function "read_csv". That's because we didn't load the package first. Out of the box, R doesn't have a lot of functionality – this is intentional – but you can add functionality with packages which, very broadly, is a set of cohesive functions. The workhorse of data-wrangling is the tidyverse [@wickham2019tidyverse], a collection of R packages — including `readr`, `dplyr`, and `purrr` — built around a shared philosophy of tidy data. Load it once at the top of your script with `library(tidyverse)` and every function it provides, including `read_csv()`, becomes available.
 
 The model you'll estimate expects one long-format dataframe. *Long format* means one row per institution-year — the same institution appears on multiple rows, one for each year, rather than having separate columns like `share_2018`, `share_2019`, etc. This is what `feols()` and almost every other R modeling function expects.
 
