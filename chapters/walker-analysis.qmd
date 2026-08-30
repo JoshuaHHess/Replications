@@ -1,0 +1,32 @@
+# Analysis
+
+Before you run anything, it's worth understanding *why* the model needs three separate fixed effects, not just trusting the output once it runs.
+
+If you estimated the relationship between $Repeal_j$ and $Share_{ijt}$ with plain OLS — no fixed effects at all — the result would be contaminated by omitted variable bias. Suppose, just for illustration, that women's colleges happen to be somewhat more common in states that didn't ban abortion. Women's colleges also have a much higher female applicant share for reasons that have nothing to do with any 2022 policy. Without fixed effects, that persistent, pre-existing difference would get folded into the estimated effect of $Repeal_j$ — it would look like the ban caused a gap that was actually there all along.
+
+Fixed effects fix this by *de-meaning*: subtracting each group's own average from every observation in that group, so the model compares observations within a group instead of across fundamentally different groups. Concretely, in this model:
+
+- $\delta_i$, the **institution fixed effect**, subtracts each school's own average $Share$ across all five years. After that subtraction, a women's college isn't "higher than average" anymore — what's left is that school's own deviation from its own typical value. This is what lets the model compare a school to itself over time, instead of to a fundamentally different kind of school.
+- $\tau_t$, the **year fixed effect**, subtracts the average $Share$ across every school in a given year. This absorbs anything that shifted applications everywhere at once in a particular year — a nationwide move toward test-optional admissions, say, or a post-pandemic surge in applications — so a shock common to every school doesn't get mistaken for a state-specific policy effect.
+- $\varphi_j$, the **state fixed effect**, subtracts each state's own average, absorbing whatever is persistently different about one state versus another that has nothing to do with the ban itself — regional draw, in-state tuition policy, or anything else that's roughly constant about that state across the whole sample.
+
+Once all three are removed, whatever variation is left is how one specific school, in one specific state, deviated from its own norm in one specific year — after already stripping out whatever every school did that year and whatever was persistently true of its state. That's the variation the $\alpha$'s are estimated from. Look at your own data for a school or two and see if you can spot both the institution-level and year-level patterns before moving on.
+
+Estimate the model with `fixest::feols()`, using `i()` to build the year-by-treatment interactions instead of typing each one out by hand:
+
+``` r
+model <- feols(
+  women_share ~ i(year, repeal, ref = 2021) | UNITID + STABBR + year,
+  cluster = ~STABBR,
+  data = df
+)
+
+summary(model)
+iplot(model)
+```
+
+`iplot()` gives you a quick, unstyled event-study plot straight from the model — good for checking your results as you go. For anything you'll put in the README or write-up, tidy the model's output into a plain dataframe with `broom::tidy()`, then build the plot yourself in `ggplot2` so you control the labels, theme, and reference line. Save it with `ggsave()` to `results/figures/`.
+
+## Results
+
+Assemble your figures and summary statistics into the README, the same way the Walker project's README does it. As an optional stretch goal, Quarto can also turn a `.qmd` file into a slide deck by setting `format: beamer` (or `format: revealjs` for HTML slides) — if you want practice presenting results instead of just writing them up, that's worth trying once your figures are done.

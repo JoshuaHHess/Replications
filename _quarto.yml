@@ -11,7 +11,11 @@ book:
   chapters:
     - index.qmd
     - chapters/01-introduction.qmd
-    - chapters/walker.qmd
+    - part: "Walker Unit"
+      chapters:
+        - chapters/walker-introduction.qmd
+        - chapters/walker-data-processing.qmd
+        - chapters/walker-analysis.qmd
 
 bibliography: references.bib
 
