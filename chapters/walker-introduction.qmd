@@ -1,6 +1,6 @@
 # Introduction
 
-This chapter walks through a replication of @walker2023anticipatory, which asks whether the anticipated repeal of *Roe v. Wade* changed the share of female freshman applicants at selective U.S. universities, comparing states where abortion became banned to states where it remained legal.
+This unit walks through a replication of @walker2023anticipatory, which asks whether the anticipated repeal of *Roe v. Wade* changed the share of female freshman applicants at selective U.S. universities, comparing states where abortion became banned to states where it remained legal.
 
 Walker, B., Wisniewski, J., Torres, J., & Sharma, R. (2023). Anticipatory impacts of the repeal of Roe v. Wade on female college applicants. *Economics Letters*, 233, 111379. <https://doi.org/10.1016/j.econlet.2023.111379> ([PDF](files/walker2023anticipatory.pdf))
 
@@ -50,8 +50,7 @@ $$\frac{\partial Share_{ijt}}{\partial Repeal_j} \big\vert_{Year = 2018} =  \alp
 
 So, our interpretation of the $\alpha$'s is they estimate the change in $Share_{ijt}$ for an affected school relative to a non-affected school relative to 2021. If the schools are the same except for the impact of $Repeal$ then there should be no change in the years leading up to *Dobbs*.
 
-$$
-\alpha_{2018} =  \alpha_{2019} = \alpha_{2020}  =  0$$
+$$\alpha_{2018} =  \alpha_{2019} = \alpha_{2020}  =  0$$
 
 This is often referred to as the parallel trends assumption.
 

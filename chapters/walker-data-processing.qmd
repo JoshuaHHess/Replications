@@ -41,6 +41,7 @@ Within sections, use (lots of) comments to explain the code in detail.
 Let's start by importing the data containing applications. The easiest way to do this is to navigate to your data in the Files pane of Rstudio and click on it. Rstudio will offer to import the data for you, but that's not reproducible. Instead, copy the code and paste it into your script.
 
 ```{r}
+#| label: import-error
 #| error: true
 df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv")
 ```
@@ -50,6 +51,7 @@ Get used to errors. They happen a lot. Fortunately, you can paste error messages
 This is an excellent place to add sections and comments.
 
 ```{r}
+#| label: workflow-initial
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -61,12 +63,14 @@ df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv")
 You can have a look at the dataframe with `view(df)` or by clicking on it in the Environment pane in the upper right of Rstudio. It has `r nrow(df)` rows and `r ncol(df)` columns. The sheer width of it makes it difficult to find the variables of interest. So, instead we just ask for the names of the variable in the console:
 
 ```{r}
+#| label: demo-names
 names(df)
 ```
 
 It might be easier to read the variables if they were in some order.
 
 ```{r}
+#| label: demo-sort-names
 sort(names(df))
 ```
 
@@ -86,6 +90,7 @@ Before moving forward, notice the nesting in `sort(names(df))`. With more compli
 The pipe operator places the left-hand side into the *first* slot of the right-hand function.
 
 ```{r}
+#| label: demo-pipe
 #| eval: false
 
 sort(names(df))
@@ -101,6 +106,7 @@ The shortcuts are:
 Returning to the variables in the data, we have UNITID, APPLCNM, APPLCNW, but we don't have the year. We need to make a new variable that has the year. You can do that with the `mutate()` function from the *tidyverse* package.
 
 ```{r}
+#| label: workflow-year
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -113,6 +119,7 @@ df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv") |>
 Now, let's bring in the next file. We can copy and paste the code and just change the year.
 
 ```{r}
+#| label: workflow-copypaste-1
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -131,6 +138,7 @@ Now, we need to combine them. *If* the data have all the same columns – which 
 It, correctly, suggests `bind_rows()`. Not to be too trusting, you quickly verify by typing in the console `?bind_rows()` which brings up the documentation. It seems legit so now we can consolidate. Now,
 
 ```{r}
+#| label: workflow-bindrows
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -148,6 +156,7 @@ df <- df |> bind_rows(df2)
 Let's do the next file. We copy and paste the df2 line, change the filename and the year, and then repeat binding in the last line.
 
 ```{r}
+#| label: workfolow-copypaste2
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -201,6 +210,7 @@ When you add text as an argument to `here()` it adds it into the path so that `h
 Construct file paths with the `here()` function instead of verbatim.
 
 ```{r}
+#| label: demo-here
 #| eval: false
 #don't do this
 folder.path <- "data/original data/IPEDS/ADM/adm2017_rv.csv"
@@ -217,6 +227,7 @@ here(folder.path,"adm2017_rv.csv")
 We can use this last bit to automate getting the file paths if we happen to have a list of the files in the directory.
 
 ```{r}
+#| label: demo-listfiles
 library(here)
 
 #path to ADM folder
@@ -234,6 +245,7 @@ We've got the list and stored it as a value. You can access specific entries fro
 This means we can construct a file path using the list.
 
 ```{r}
+#| label: demo-filepath
 #| eval: false
 library(here)
 folder.path <- here("data","original data","IPEDS","ADM")
@@ -246,6 +258,7 @@ here(folder.path,lf[1])
 So, we can import the first file in the folder by simply using its numerical place in the list.
 
 ```{r}
+#| label: workflow-indexpath
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -267,6 +280,7 @@ df <- read_csv(here(folder.path,lf[ll]))
 Next, we need to automate adding the year variable. Fortunately, it's contained in the file name. We just need to extract the four-digit year sequence from the name – which is stored in R as a string (that's just what it's called). There are a handful of ways to do this (so AI will give you a few recommendations), but you're probably better off using the *tidyverse* method: `str_extract()`. Working with strings is a thing in and of itself and well beyond the scope of what we need to understand. So, it doesn't make a lot of sense (at first blush) why this work, but it does.
 
 ```{r}
+#| label: demo-str_extract()
 #extract four digit sequence
 lf[1] |> str_extract("\\d{4}+")
 ```
@@ -274,6 +288,7 @@ lf[1] |> str_extract("\\d{4}+")
 Add this to our workflow.
 
 ```{r}
+#| label: workflow-autoyear
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -296,6 +311,7 @@ df <- read_csv(here(folder.path,lf[ll])) |>
 Again, we could copy and paste this for each file in the folder and just move the index variable forward every time so the next lines would be
 
 ```{r}
+#| label: workflow-index2
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
@@ -331,6 +347,7 @@ We could continue with the copy/paste, but let's try to Always be Automating, an
 The sequence that we want is the second, third, fourth, etc. item in the list of files. There are `r length(lf)` items in the folder, but rather than hard-code the value, we can access the number of items by asking the length of the list: `length(lf)`.
 
 ```{r}
+#| label: workflow-loop
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
