@@ -18,9 +18,7 @@ I'm not going to assume you know anything about R, so I'll use this step to intr
 
 One of the big challenges in writing scripts is *readability*. You want to write something that a human can understand as easily as possible. Two little habits that go a very, very long way are sections and comments. Both rely on `#`, which tells the machine to ignore whatever follows on that line.
 
-::: {.callout-tip appearance="simple"}
-## Coding Practices: Sections and Comments
-
+::: {.callout-tip appearance="simple" title="Coding Practices: Sections and Comments"}
 Sections are labeled blocks in scripts.
 
 Create a section by starting a line with `#` and ending it with four or more dashes or equals signs.
@@ -84,9 +82,7 @@ Ok! So, this dataframe contains what we need! It has
 
 Before moving forward, notice the nesting in `sort(names(df))`. With more complicated code, nesting hampers readability so you'll want to use the pipe operator: `|>`. Then, instead of reading inside-out, you read left to right.
 
-::: callout-tip
-## Coding Practices: Pipe Operator
-
+::: {.callout-tip title="Coding Practices: Pipe Operator"}
 The pipe operator places the left-hand side into the *first* slot of the right-hand function.
 
 ```{r}
@@ -180,9 +176,7 @@ df <- df |> bind_rows(df2)
 
 We could continue copying and pasting, but....
 
-::: callout-tip
-## Coding Tip: Always be Automating
-
+::: {.callout-tip title="Coding Tip: Always be Automating"}
 Replaced repeated processes with automation.
 :::
 
@@ -204,9 +198,7 @@ This function constructs paths. It is very complementary to Projects, and you've
 
 When you add text as an argument to `here()` it adds it into the path so that `here("data")` creates a path to the *data* folder, which should already exist. These paths can be stored as variables and used as arguments for the `here()` function.
 
-::: callout-tip
-## Coding Practices: here()
-
+::: {.callout-tip title="Coding Practices: here()"}
 Construct file paths with the `here()` function instead of verbatim.
 
 ```{r}

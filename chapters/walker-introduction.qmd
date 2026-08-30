@@ -54,9 +54,7 @@ $$\alpha_{2018} =  \alpha_{2019} = \alpha_{2020}  =  0$$
 
 This is often referred to as the parallel trends assumption.
 
-::: {.callout-note appearance="simple"}
-### Parallel Trends Assumption
-
+::: {.callout-note appearance="simple" title="Parallel Trends Assumption"}
 In the absence of treatment, the difference between the ‘treatment’ and ‘control’ group is constant over time.
 :::
 
