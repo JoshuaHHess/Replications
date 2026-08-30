@@ -1,11 +1,9 @@
 # Data Processing
 
 ```{r}
-#| label: set directory
+#| label: silent-packages
 #| include: false
 
-#THE INTSTRUCTIONAL APPROACH IS THAT PROJECT IS IN A FILE CALLED WALKER
-knitr::opts_knit$set(root.dir = here::here("Walker"))
 
 library(here)
 ```
@@ -34,14 +32,16 @@ Within sections, use (lots of) comments to explain the code in detail.
 `# create the women's share of applicants variable`
 :::
 
-## Import Raw Code
+## Import Raw Data
+
+### Import Application Data
 
 Let's start by importing the data containing applications. The easiest way to do this is to navigate to your data in the Files pane of Rstudio and click on it. Rstudio will offer to import the data for you, but that's not reproducible. Instead, copy the code and paste it into your script.
 
 ```{r}
 #| label: import-error
 #| error: true
-df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv")
+df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv")
 ```
 
 Get used to errors. They happen a lot. Fortunately, you can paste error messages into a low-grade AI model and it can usually interpret it for you. This errors is saying it doesn't know the function `read_csv()`. That's because we didn't load the package first. Out of the box, R doesn't have a lot of functionality – this is intentional – but you can add functionality with packages which, very broadly, is a set of cohesive functions. The workhorse of data-wrangling is the tidyverse [@wickham2019tidyverse], a collection of R packages — including `readr`, `dplyr`, and `purrr` — built around a shared philosophy of tidy data. Load it once at the top of your script with `library(tidyverse)` and every function it provides, including `read_csv()`, becomes available.
@@ -55,7 +55,7 @@ This is an excellent place to add sections and comments.
 library(tidyverse)
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv")
+df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv")
 ```
 
 You can have a look at the dataframe with `view(df)` or by clicking on it in the Environment pane in the upper right of Rstudio. It has `r nrow(df)` rows and `r ncol(df)` columns. The sheer width of it makes it difficult to find the variables of interest. So, instead we just ask for the names of the variable in the console:
@@ -108,8 +108,8 @@ Returning to the variables in the data, we have UNITID, APPLCNM, APPLCNW, but we
 library(tidyverse)
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv") |>
-  mutate(year = 2017)
+df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
+  mutate(year = 2018)
 ```
 
 Now, let's bring in the next file. We can copy and paste the code and just change the year.
@@ -121,15 +121,15 @@ Now, let's bring in the next file. We can copy and paste the code and just chang
 library(tidyverse)
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv") |>
-  mutate(year = 2017)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
+df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
   mutate(year = 2018)
+df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
+  mutate(year = 2019)
 ```
 
 Now, we need to combine them. *If* the data have all the same columns – which they should in this particular instance – then you simply want to stack them (bind the rows together). Just for fun, I'm going to ask AI how to do this. I'll copy and paste my code into Google and ask it how to combine the data.
 
-![Asking an AI overview how to combine two years of data with `bind_rows()`](images/bind-rows.png){width="272"}
+![Asking an AI overview how to combine two years of data with `bind_rows()`](images/bind-rows.png){width="544"}
 
 It, correctly, suggests `bind_rows()`. Not to be too trusting, you quickly verify by typing in the console `?bind_rows()` which brings up the documentation. It seems legit so now we can consolidate. Now,
 
@@ -140,10 +140,10 @@ It, correctly, suggests `bind_rows()`. Not to be too trusting, you quickly verif
 library(tidyverse)
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv") |>
-  mutate(year = 2017)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
+df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
   mutate(year = 2018)
+df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
+  mutate(year = 2019)
 
 #combine dataframes
 df <- df |> bind_rows(df2)
@@ -152,23 +152,23 @@ df <- df |> bind_rows(df2)
 Let's do the next file. We copy and paste the df2 line, change the filename and the year, and then repeat binding in the last line.
 
 ```{r}
-#| label: workfolow-copypaste2
+#| label: workflow-copypaste2
 #==== LOAD PACKAGES =====
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
 library(tidyverse)
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2017_rv.csv") |>
-  mutate(year = 2017)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
+df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
   mutate(year = 2018)
+df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
+  mutate(year = 2019)
 
 #combine dataframes
 df <- df |> bind_rows(df2)
 
 #overwrite df2 with next file (fine since that info is in df)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
-  mutate(year = 2019) #correct filename and year
+df2 <- read_csv("data/original data/IPEDS/ADM/adm2020_rv.csv") |>
+  mutate(year = 2020) #correct filename and year
 
 #add to existing dataframe
 df <- df |> bind_rows(df2)
@@ -205,14 +205,14 @@ Construct file paths with the `here()` function instead of verbatim.
 #| label: demo-here
 #| eval: false
 #don't do this
-folder.path <- "data/original data/IPEDS/ADM/adm2017_rv.csv"
+folder.path <- "data/original data/IPEDS/ADM/adm2018_rv.csv"
 
 #use here() instead
-folder.path <- here("data","original data","IPEDS","ADM","adm2017_rv.csv")
+folder.path <- here("data","original data","IPEDS","ADM","adm2018_rv.csv")
 
 #even better
 folder.path <- here("data","original data","IPEDS","ADM")
-here(folder.path,"adm2017_rv.csv")
+here(folder.path,"adm2018_rv.csv")
 ```
 :::
 
@@ -366,26 +366,206 @@ for (ll in 2:length(lf)){
   #bind to exisiting dataframe
   df <- df |> bind_rows(df2)
 }
+```
+
+### Check Application Data Import
+
+We seem to have successfully imported the applications data! More importantly, we have a ready made workflow that can be re-used for the directory data. However, were there to be an error in the initial workflow that was unnoticed, we would compound the mistake by blithely re-using it. It is, in fact, quite rare for a first pass to be mistake free so the wise coder pauses frequently to check imported data. Very frequently. There are a variety of checks that can (and should) be implemented, but the easiest one is in the *modelsummary* package.
+
+So, load the package with `library(modelsummary)` (you may need to install it first with `install.packages("modelsummary")`). Then, use datasummary_skim(df) to examine your dataframe. That does turn out to be A LOT. So, let's focus on the variables of interest instead. That is, we'd like to select just a few columns from the dataframe to be "skimmed".
+
+```{r}
+#| label: demo-datasummary_skim
+library(modelsummary)
+df |> select(UNITID,year,APPLCNM,APPLCNW) |> datasummary_skim()
 
 ```
 
-The model you'll estimate expects one long-format dataframe. *Long format* means one row per institution-year — the same institution appears on multiple rows, one for each year, rather than having separate columns like `share_2018`, `share_2019`, etc. This is what `feols()` and almost every other R modeling function expects.
+Let's briefly discus what the "skim" shows.
 
-Getting there is three tasks: import the raw files and merge them into one dataframe, create the variables you actually need, and clean the result down to your final sample. Once you have that single clean dataframe, save it to `data/saved data/` — from then on, your analysis scripts can just load that one file instead of re-running the import every time, which makes it much easier to clear your environment and start fresh when you're working on the model itself.
+UNITID is the unique indicator for a school. We see there are `r df |> distinct(UNITID) |> nrow()` schools in the sample. Since this, more or less, includes any school a person might attend after high school (post-secondary) – from clown college to medical school – it's seems reasonable. We have 0% missing school indicators which means every unit in the sample is identified.
 
-## Import Raw Data
+APPLCNM is the number of men applicants to a school. We have a value for APPLCNM for each school in each year (I'll refer to this as school-year) as we have 0% missing. The mean value across the sample is `r mean(df$APPLCNM)` though the median is `r median(df$APPLCNM)`. This is exactly what we'd expect. A handful of huge public universities have applicant pools in the tens of thousands, which yanks the mean up without moving the median much. Indeed, the the highest observed value is `r max(df$APPLCNM)`, and the histogram shows the vast majority of the schools have very few male applicants (the lump on the left) but quite a few have very large values (the spread on the right).
 
-The most explicit way to do this is to read each year's file separately and stack them with `bind_rows()` — you did something like this already for the ADM data. It works, but it's repetitive: the same five lines, once per year, with only the year changing.
+This pattern is similar of for APPLCNW, the number of women applicants. The *year* variable has entries for `r min(df$year)`- `r max(df$year).` The number of schools reporting in a year declines slightly, but the loss of `r df |> ungroup() |> group_by(year) |> summarize(n = n_distinct(UNITID)) |> pull(n) |> range() |> diff()` seems reasonably attributable to schools closing.
 
-A loop removes the repetition. The tidyverse way to loop over files is `purrr::map_dfr()`, which reads each file, applies whatever you tell it to, and stacks the results into one dataframe automatically:
+Nothing in this screams red flag, so we can proceed.
 
-``` r
-adm_files <- list.files("data/original data/IPEDS/ADM", full.names = TRUE)
+### Import Directory Data
 
-adm <- map_dfr(adm_files, read_csv)
+We can re-use our loop to import the directory data which contains, among other information, the school name and the state in which it is located. This last part is required to match schools to state policy.
+
+We can start by renaming the final dataframe so we can overwrite `df`. Right after the `for` loop, we add `df.adm <- df`. The initial workflow created a few other variables that are no longer needed. As such, they can be removed from the environment with `rm()`, and we'll do this after the rename with `rm(folder.path,lf,ll,df,df2).`
+
+```{r}
+#| label: workflow-adm-clean
+#==== LOAD PACKAGES =====
+#auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
+library(tidyverse)
+library(here)
+
+#==== IMPORT ADM DATA ====
+#set ADM file path
+folder.path <- here("data","original data","IPEDS","ADM")
+
+#get list of files in ADM folder
+lf <- list.files(folder.path)
+
+##initialize dataframe
+ll <- 1
+df <- read_csv(here(folder.path,lf[ll])) |>
+  mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+
+##loop over remaining files
+for (ll in 2:length(lf)){
+  #read file and add year variable
+  df2 <- read_csv(here(folder.path,lf[ll])) |>
+    mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+
+  #bind to exisiting dataframe
+  df <- df |> bind_rows(df2)
+}
+
+df.adm <- df
+rm(folder.path,lf,ll,df,df2)
 ```
 
-Once each survey (ADM, HD, EF-C) is its own clean dataframe, join them together on `UNITID` — the institution ID IPEDS uses consistently across every survey — with `left_join()`. Use a left join starting from whichever dataframe defines your sample (ADM, since that's your outcome variable) so you don't accidentally drop institutions just because they're missing from a survey you joined in later.
+Now we can copy and paste everything from the `#==== IMPORT ADM DATA ====` section down and re-use it for the *HD* data. We'll need to make only three minor changes:
+
+1.  change the section and comments to indicate *HD*
+
+2.  change the folder path to point the the *HD* folder
+
+3.  rename the final dataframe to avoid overwriting `df.adm`
+
+```{r}
+#| label: workflow-hd
+#==== LOAD PACKAGES =====
+#auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
+library(tidyverse)
+library(here)
+
+#==== IMPORT ADM DATA ====
+#set ADM file path
+folder.path <- here("data","original data","IPEDS","ADM")
+
+#get list of files in ADM folder
+lf <- list.files(folder.path)
+
+##initialize dataframe
+ll <- 1
+df <- read_csv(here(folder.path,lf[ll])) |>
+  mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+
+##loop over remaining files
+for (ll in 2:length(lf)){
+  #read file and add year variable
+  df2 <- read_csv(here(folder.path,lf[ll])) |>
+    mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+
+  #bind to exisiting dataframe
+  df <- df |> bind_rows(df2)
+}
+
+df.adm <- df
+rm(folder.path,lf,ll,df,df2)
+
+#==== IMPORT HD DATA ====
+#set HD file path
+folder.path <- here("data","original data","IPEDS","HD")
+
+#get list of files in HD folder
+lf <- list.files(folder.path)
+
+##initialize dataframe
+ll <- 1
+df <- read_csv(here(folder.path,lf[ll])) |>
+  mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+
+##loop over remaining files
+for (ll in 2:length(lf)){
+  #read file and add year variable
+  df2 <- read_csv(here(folder.path,lf[ll])) |>
+    mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+  
+  #bind to exisiting dataframe
+  df <- df |> bind_rows(df2)
+}
+
+df.hd <- df
+rm(folder.path,lf,ll,df,df2)
+```
+
+This dataframe has `r nrow(df.hd)` observations, but we were expecting something much closer to `r nrow(df.adm)`. One way to investigate this is to get the list of units in `df.hd` that are not in `df.adm`. We can examine those schools for similarities or ask (Google/AI) why they aren't in the *ADM* survey.
+
+```{r}
+#| label: hd-latin1-encoding
+#| include: false
+#==== IMPORT HD DATA ====
+#set HD file path
+folder.path <- here("data","original data","IPEDS","HD")
+
+#get list of files in HD folder
+lf <- list.files(folder.path)
+
+##initialize dataframe
+ll <- 1
+df <- read_csv(here(folder.path,lf[ll]), locale = locale(encoding ="Latin1")) |>
+  mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+
+##loop over remaining files
+for (ll in 2:length(lf)){
+  #read file and add year variable
+  df2 <- read_csv(here(folder.path,lf[ll]),locale = locale(encoding ="Latin1")) |>
+    mutate(year = lf[ll] |> str_extract("\\d{4}+"))
+  
+  #bind to exisiting dataframe
+  df <- df |> bind_rows(df2)
+}
+
+df.hd <- df
+rm(folder.path,lf,ll,df,df2)
+```
+
+We can, and should, also "skim" the important variables in the dataframe.
+
+```{r}
+#| label: skim-df.hd
+
+df.hd |> select(UNITID,year,STABBR) |> datasummary_skim()
+
+```
+
+No missing UNITIDs – great! Similar distribution of observations across the years in comparison to `df.adm`. The warning on the `STABBR` isn't great. That's an important variable and it didn't get "skimmed". Let's try counting the observations by state
+
+```{r}
+#| label: demo-count
+df.hd |> count(STABBR) |> print(n=Inf)
+```
+
+There are `r df.hd |> count(STABBR) |> nrow()` "states" in the sample despite the U.S. having less than that. Well, R has a nice built-in command that gives you the state abbreviations for the U.S. `state.abb`. We'd like to see if any of the "states" in `df.hd` are not in the 50 listed in `state.abb`. This is best handled by the `filter()` function from *tidyverse*, which filters in rows of a dataframe based on a criteria. First, we'll see if filtering `df.hd` based on inclusion in `state.abb` removes anything. This would mean that some observations are not in U.S. states. We can note the removal because the filtered dataframe will have a smaller number of rows.
+
+```{r}
+#| label: demo-filter
+df.hd |> filter(STABBR %in% state.abb) |> nrow()
+```
+
+`df.hd` has `r df.hd |> nrow())` rows before but the filter reduces it to `r (df.hd |> filter(STABBR %in% state.abb) |> nrow())` and we've lost `r (df.hd |> nrow()) - (df.hd |> filter(STABBR %in% state.abb) |> nrow())` observations by dong this. Let's see what we've lost.
+
+R's logical negation operator is `!` and it, more or less, flips a true/false evaluator. For example ask `x == 2` asks R: is x equal to 2? If x has a value (maybe assigned with `x <- 2`) then R will respond with `TRUE` or `FALSE`. If you want to ask the opposite – is x *not equal* to 2 – you use the logical negation, `x != 2`.
+
+```{r}
+#| label: demo-!
+df.hd |> filter(!(STABBR %in% state.abb)) |>  count(STABBR) |> print(n=Inf)
+```
+
+This shows that we have nine "states" that are actually not U.S. states. It turns out, Puerto Rico has `r df.hd |> filter(STABBR == "PR") |> nrow()` schools. Who knew?
+
+### Combine Dataframes
+
+Let's proceed to the next step and combine the IPEDS dataframes. We will add to the workflow script we've already started
+
+Once you have a clean, checked dataframe for one survey, save it to `data/saved data/` — from then on, your analysis scripts can just load that one file instead of re-running the import every time, which makes it much easier to clear your environment and start fresh when you're working on the model itself. Repeat this same workflow (import, automate, check with `datasummary_skim()`) for the HD and EF-C surveys, then join them all together on `UNITID` — the institution ID IPEDS uses consistently across every survey — with `left_join()`. Use a left join starting from whichever dataframe defines your sample (ADM, since that's your outcome variable) so you don't accidentally drop institutions just because they're missing from a survey you joined in later.
 
 ## Make Variables
 
