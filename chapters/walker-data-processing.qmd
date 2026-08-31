@@ -4,6 +4,7 @@
 #| label: silent-packages
 #| include: false
 
+options(repos = c(CRAN = "https://cloud.r-project.org"))
 
 library(here)
 ```
@@ -34,28 +35,158 @@ Within sections, use (lots of) comments to explain the code in detail.
 
 ## Import Raw Data
 
-### Import Application Data
+### Import US News & World Report Ranking
 
-Let's start by importing the data containing applications. The easiest way to do this is to navigate to your data in the Files pane of Rstudio and click on it. Rstudio will offer to import the data for you, but that's not reproducible. Instead, copy the code and paste it into your script.
+Let's start with a simple task: import a single Excel file, the U.S. News & World Report ranking.
+
+The easiest way to import a file is to navigate to it in the *Files* pane of Rstudio and click on it. Rstudio will offer to import the data for you, but that's not reproducible. Instead, copy the code it generates and paste it into your script.
 
 ```{r}
-#| label: import-error
+#| label: import-error-rankings
 #| error: true
-df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv")
+df.rank <- read_excel("data/original data/USNWR.xlsx")
 ```
 
-Get used to errors. They happen a lot. Fortunately, you can paste error messages into a low-grade AI model and it can usually interpret it for you. This errors is saying it doesn't know the function `read_csv()`. That's because we didn't load the package first. Out of the box, R doesn't have a lot of functionality – this is intentional – but you can add functionality with packages which, very broadly, is a set of cohesive functions. The workhorse of data-wrangling is the tidyverse [@wickham2019tidyverse], a collection of R packages — including `readr`, `dplyr`, and `purrr` — built around a shared philosophy of tidy data. Load it once at the top of your script with `library(tidyverse)` and every function it provides, including `read_csv()`, becomes available.
+Get used to errors. They happen a lot. Fortunately, you can paste error messages into a low-grade AI model and it can usually interpret it for you. This error is saying it doesn't know the function `read_excel()`. That's because we didn't load the package first. Out of the box, R doesn't have a lot of functionality – this is intentional – but you can add functionality with packages which, very broadly, is a set of cohesive functions. Let's do that now. We will install and add the package.
 
 This is an excellent place to add sections and comments.
 
 ```{r}
-#| label: workflow-initial
+#| label: workflow-rankings-initial
 #==== LOAD PACKAGES =====
-#auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
+install.packages("readxl")
+library(readxl)
+
+#==== IMPORT RANKINGS DATA ====
+df.rank <- read_excel("data/original data/USNWR.xlsx")
+```
+
+That works, but the path is fragile. It's typed out exactly as it sits relative to wherever R's working directory happens to be right now, which depends on how you opened R, not on where your files actually live. Move the script, hand it to a classmate, or open R a different way, and `"data/original data/USNWR.xlsx"` may no longer point anywhere real.
+
+This is best solved with the `here()` function from the *here* package. It constructs paths starting from the location of your `.Rproj` file, which is very complementary to Projects (see @sec-projects) — since that file marks a fixed home base, `here()` always knows where "home" is regardless of how R was launched. You'll get a message about this when you load the package. Make sure it's not already loaded with `detach("package:here", unload = TRUE)` -- it's ok if this throws an error. Then, load it with `library(here)`. You'll get a message in your console telling you where it "starts". Test this by typing `here()` into your console.
+
+When you add text as an argument to `here()` it adds it into the path so that `here("data")` creates a path to the *data* folder, which should already exist. These paths can be stored as variables and used as arguments for the `here()` function.
+
+::: {.callout-tip title="Coding Practices: here()"}
+Construct file paths with the `here()` function instead of verbatim.
+
+```{r}
+#| label: demo-here
+#| eval: false
+#don't do this
+rankings.path <- "data/original data/USNWR.xlsx"
+
+#use here() instead
+rankings.path <- here("data","original data","USNWR.xlsx")
+
+#even better
+data.path <- here("data","original data")
+rankings.path <- here(data.path,"USNWR.xlsx")
+```
+:::
+
+Let's include this in our workflow.
+
+```{r}
+#| label: workflow-rankings-here
+#==== LOAD PACKAGES =====
+install.packages("readxl")
+library(readxl)
+
+install.packages("here")
+library(here)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
+```
+
+The `LOAD PACKAGES` section is getting a little heavy. It installs the packages every time, and we really should have those lines for reproducibility, and it's starting to take up some vertical space. One thing we can do to help with this is a package helper package called *pacman*. It has a function called `p_load` that combines installing and loading into one step and accepts multiple packages as arguments. you have to install it with the typical method, but after that we can streamline the `LOAD PACKAGES` section.
+
+```{r}
+#| label: demo-pacman
+#==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
+```
+
+You can examine the dataframe with `view(df.rank)` or by clicking on it in the Data frame in the upper right of Rstudio.
+
+<!-- ```{r} -->
+
+<!-- #| label: demo-rank-names -->
+
+<!-- names(df.rank) -->
+
+<!-- ``` -->
+
+<!-- It has `r nrow(df.rank)` schools, an `IPEDS` column (the same `UNITID` you'll see in the other surveys, just under a different name), a `State` column, and then one column per year the rankings have been published, going back decades. We only need a handful of those years, and right now each year is its own column instead of one tidy `year` variable — that's a `pivot_longer()` problem for later, in the *Make Variables* section. For now, importing it and confirming it looks right is enough. -->
+
+### Import Application Data
+
+Now let's bring in something a little more involved: the applications data, which is split across one file per year instead of a single spreadsheet.
+
+Start with the same technique as before. Navigate to the file in the *Files* pane in the lower right side of Rstudio and click on the file you wish to import.
+
+```{r}
+#| label: import-error
+#| error: true
+
+#==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
 df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv")
+```
+
+Same error as before, same fix — `read_csv()` lives in `readr`, which is attached to the workhorse of data-wrangling , tidyverse [@wickham2019tidyverse]. Tidyverse is actually a collection of R packages — including `readr`, `dplyr`, and `purrr` — built around a shared philosophy of tidy data. Load it once at the top of your script with `library(tidyverse)`. In fact, the *readxl* package is installed with *tidyverse,* but doesn't get attached automatically.
+
+Loading the *tidyverse* package with `pacman::p_load()` should stop the error. Additionally, we can use `here()` to generate a path to the *ADM* folder building from `data.path` which points to the *original data* folder.
+
+```{r}
+#| label: workflow-tidyverse
+#| error: true
+
+#==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
+#auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
+
+#==== IMPORT ADM DATA ====
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
+df <- read_csv(here(folder.path,"adm2018_rv.csv"))
 ```
 
 You can have a look at the dataframe with `view(df)` or by clicking on it in the Environment pane in the upper right of Rstudio. It has `r nrow(df)` rows and `r ncol(df)` columns. The sheer width of it makes it difficult to find the variables of interest. So, instead we just ask for the names of the variable in the console:
@@ -104,27 +235,56 @@ Returning to the variables in the data, we have UNITID, APPLCNM, APPLCNW, but we
 ```{r}
 #| label: workflow-year
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
-  mutate(year = 2018)
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
+
+#read files
+df <- read_csv(here(folder.path,"adm2018_rv.csv")) |> mutate(year = 2018)
 ```
 
 Now, let's bring in the next file. We can copy and paste the code and just change the year.
 
 ```{r}
 #| label: workflow-copypaste-1
-#==== LOAD PACKAGES =====
+##==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
-  mutate(year = 2018)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
-  mutate(year = 2019)
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
+
+#read files and add year variable
+df <- read_csv(here(folder.path,"adm2018_rv.csv")) |> mutate(year = 2018)
+df2 <- read_csv(here(folder.path,"adm2019_rv.csv")) |> mutate(year = 2019)
 ```
 
 Now, we need to combine them. *If* the data have all the same columns – which they should in this particular instance – then you simply want to stack them (bind the rows together). Just for fun, I'm going to ask AI how to do this. I'll copy and paste my code into Google and ask it how to combine the data.
@@ -136,14 +296,28 @@ It, correctly, suggests `bind_rows()`. Not to be too trusting, you quickly verif
 ```{r}
 #| label: workflow-bindrows
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
-  mutate(year = 2018)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
-  mutate(year = 2019)
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
+
+#read files and add year variable
+df <- read_csv(here(folder.path,"adm2018_rv.csv")) |> mutate(year = 2018)
+df2 <- read_csv(here(folder.path,"adm2019_rv.csv")) |> mutate(year = 2019)
 
 #combine dataframes
 df <- df |> bind_rows(df2)
@@ -154,21 +328,37 @@ Let's do the next file. We copy and paste the df2 line, change the filename and 
 ```{r}
 #| label: workflow-copypaste2
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-df <- read_csv("data/original data/IPEDS/ADM/adm2018_rv.csv") |>
-  mutate(year = 2018)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2019_rv.csv") |>
-  mutate(year = 2019)
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
+
+#read files and add year variable
+df <- read_csv(here(folder.path,"adm2018_rv.csv")) |> mutate(year = 2018)
+df2 <- read_csv(here(folder.path,"adm2019_rv.csv")) |> mutate(year = 2019)
+
+#combine dataframes
+df <- df |> bind_rows(df2)
 
 #combine dataframes
 df <- df |> bind_rows(df2)
 
 #overwrite df2 with next file (fine since that info is in df)
-df2 <- read_csv("data/original data/IPEDS/ADM/adm2020_rv.csv") |>
-  mutate(year = 2020) #correct filename and year
+df2 <- read_csv(here(folder.path,"adm2020_rv.csv")) |> mutate(year = 2020) #correct filename and year
 
 #add to existing dataframe
 df <- df |> bind_rows(df2)
@@ -182,7 +372,7 @@ Replaced repeated processes with automation.
 
 Now that we understand our process, let's try to automate it. The process is
 
-- select a file in the folder
+- use the filename and `here()` to construct the path
 
 - import the file
 
@@ -192,38 +382,12 @@ Now that we understand our process, let's try to automate it. The process is
 
 - repeat for each file in the folder
 
-Let's automate the file selection. This is best done with the `here()` function from the *here* package which we really should have been using anyway.
-
-This function constructs paths. It is very complementary to Projects, and you've already initialized one in your replication folder (see @sec-projects). `here()`, gives the file path to the location of the .Rproj file. You'll get a message about this when you load the package. Make sure it's not already loaded with `detach("package:here", unload = TRUE)` -- it's ok if this throws an error. Then, load it with `library(here)`. You'll get a message in your console telling you where it "starts". Test this by typing here() into your console.
-
-When you add text as an argument to `here()` it adds it into the path so that `here("data")` creates a path to the *data* folder, which should already exist. These paths can be stored as variables and used as arguments for the `here()` function.
-
-::: {.callout-tip title="Coding Practices: here()"}
-Construct file paths with the `here()` function instead of verbatim.
-
-```{r}
-#| label: demo-here
-#| eval: false
-#don't do this
-folder.path <- "data/original data/IPEDS/ADM/adm2018_rv.csv"
-
-#use here() instead
-folder.path <- here("data","original data","IPEDS","ADM","adm2018_rv.csv")
-
-#even better
-folder.path <- here("data","original data","IPEDS","ADM")
-here(folder.path,"adm2018_rv.csv")
-```
-:::
-
-We can use this last bit to automate getting the file paths if we happen to have a list of the files in the directory.
+Let's start by getting a list of the names of all the files in the directory. R provides a convenient function for this `list.files()`.
 
 ```{r}
 #| label: demo-listfiles
-library(here)
 
-#path to ADM folder
-folder.path <- here("data","original data","IPEDS","ADM")
+folder.path <- here(data.path,"IPEDS","ADM")
 
 #get list of files in ADM folder
 lf <- list.files(folder.path)
@@ -239,7 +403,7 @@ This means we can construct a file path using the list.
 ```{r}
 #| label: demo-filepath
 #| eval: false
-library(here)
+
 folder.path <- here("data","original data","IPEDS","ADM")
 lf <- list.files(folder.path)
 
@@ -252,19 +416,30 @@ So, we can import the first file in the folder by simply using its numerical pla
 ```{r}
 #| label: workflow-indexpath
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
-library(here)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-#set ADM file path
-folder.path <- here("data","original data","IPEDS","ADM")
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
 
 #get list of files in ADM folder
 lf <- list.files(folder.path)
 
-##read first file
-###index variable
+#read files and add year variable
+##index variable
 ll <- 1
 df <- read_csv(here(folder.path,lf[ll]))
 ```
@@ -282,21 +457,32 @@ Add this to our workflow.
 ```{r}
 #| label: workflow-autoyear
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
-library(here)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-#set ADM file path
-folder.path <- here("data","original data","IPEDS","ADM")
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
 
 #get list of files in ADM folder
 lf <- list.files(folder.path)
 
-##read first file
-###index variable
+#read files and add year variable
+##index variable
 ll <- 1
-df <- read_csv(here(folder.path,lf[ll])) |>
+df <- read_csv(here(folder.path,lf[ll])) |> 
   mutate(year = lf[ll] |> str_extract("\\d{4}+"))
 ```
 
@@ -305,24 +491,35 @@ Again, we could copy and paste this for each file in the folder and just move th
 ```{r}
 #| label: workflow-index2
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
-library(here)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-#set ADM file path
-folder.path <- here("data","original data","IPEDS","ADM")
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
 
 #get list of files in ADM folder
 lf <- list.files(folder.path)
 
-##read first file
-###index variable
+#read files and add year variable
+##index variable
 ll <- 1
-df <- read_csv(here(folder.path,lf[ll])) |>
+df <- read_csv(here(folder.path,lf[ll])) |> 
   mutate(year = lf[ll] |> str_extract("\\d{4}+"))
 
-###index variable
+##index variable
 ll <- 2
 df2 <- read_csv(here(folder.path,lf[ll])) |>
   mutate(year = lf[ll] |> str_extract("\\d{4}+"))
@@ -341,20 +538,32 @@ The sequence that we want is the second, third, fourth, etc. item in the list of
 ```{r}
 #| label: workflow-loop
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
-library(here)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-#set ADM file path
-folder.path <- here("data","original data","IPEDS","ADM")
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
 
 #get list of files in ADM folder
 lf <- list.files(folder.path)
 
+#read files and add year variable
 ##initialize dataframe
 ll <- 1
-df <- read_csv(here(folder.path,lf[ll])) |>
+df <- read_csv(here(folder.path,lf[ll])) |> 
   mutate(year = lf[ll] |> str_extract("\\d{4}+"))
 
 ##loop over remaining files
@@ -387,7 +596,7 @@ UNITID is the unique indicator for a school. We see there are `r df |> distinct(
 
 APPLCNM is the number of men applicants to a school. We have a value for APPLCNM for each school in each year (I'll refer to this as school-year) as we have 0% missing. The mean value across the sample is `r mean(df$APPLCNM)` though the median is `r median(df$APPLCNM)`. This is exactly what we'd expect. A handful of huge public universities have applicant pools in the tens of thousands, which yanks the mean up without moving the median much. Indeed, the the highest observed value is `r max(df$APPLCNM)`, and the histogram shows the vast majority of the schools have very few male applicants (the lump on the left) but quite a few have very large values (the spread on the right).
 
-This pattern is similar of for APPLCNW, the number of women applicants. The *year* variable has entries for `r min(df$year)`- `r max(df$year).` The number of schools reporting in a year declines slightly, but the loss of `r df |> ungroup() |> group_by(year) |> summarize(n = n_distinct(UNITID)) |> pull(n) |> range() |> diff()` seems reasonably attributable to schools closing.
+This pattern is similar of for APPLCNW, the number of women applicants. The *year* variable has entries for `r min(df$year)`- `r max(df$year)`. The number of schools reporting in a year declines slightly, but the loss of `r df |> ungroup() |> group_by(year) |> summarize(n = n_distinct(UNITID)) |> pull(n) |> range() |> diff()` seems reasonably attributable to schools closing.
 
 Nothing in this screams red flag, so we can proceed.
 
@@ -395,42 +604,7 @@ Nothing in this screams red flag, so we can proceed.
 
 We can re-use our loop to import the directory data which contains, among other information, the school name and the state in which it is located. This last part is required to match schools to state policy.
 
-We can start by renaming the final dataframe so we can overwrite `df`. Right after the `for` loop, we add `df.adm <- df`. The initial workflow created a few other variables that are no longer needed. As such, they can be removed from the environment with `rm()`, and we'll do this after the rename with `rm(folder.path,lf,ll,df,df2).`
-
-```{r}
-#| label: workflow-adm-clean
-#==== LOAD PACKAGES =====
-#auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
-library(here)
-
-#==== IMPORT ADM DATA ====
-#set ADM file path
-folder.path <- here("data","original data","IPEDS","ADM")
-
-#get list of files in ADM folder
-lf <- list.files(folder.path)
-
-##initialize dataframe
-ll <- 1
-df <- read_csv(here(folder.path,lf[ll])) |>
-  mutate(year = lf[ll] |> str_extract("\\d{4}+"))
-
-##loop over remaining files
-for (ll in 2:length(lf)){
-  #read file and add year variable
-  df2 <- read_csv(here(folder.path,lf[ll])) |>
-    mutate(year = lf[ll] |> str_extract("\\d{4}+"))
-
-  #bind to exisiting dataframe
-  df <- df |> bind_rows(df2)
-}
-
-df.adm <- df
-rm(folder.path,lf,ll,df,df2)
-```
-
-Now we can copy and paste everything from the `#==== IMPORT ADM DATA ====` section down and re-use it for the *HD* data. We'll need to make only three minor changes:
+We can start by renaming the final dataframe so we can overwrite `df`. Right after the `for` loop, we add `df.adm <- df`. The initial workflow created a few other variables that are no longer needed. As such, they can be removed from the environment with `rm()`, and we'll do this after the rename with `rm(folder.path,lf,ll,df,df2).`Now we can copy and paste everything from the `#==== IMPORT ADM DATA ====` section down and re-use it for the *HD* data. We'll need to make only three minor changes:
 
 1.  change the section and comments to indicate *HD*
 
@@ -441,20 +615,32 @@ Now we can copy and paste everything from the `#==== IMPORT ADM DATA ====` secti
 ```{r}
 #| label: workflow-hd
 #==== LOAD PACKAGES =====
+#load pacman to facilitate package loading
+install.packages("pacman",quiet = TRUE) #do this quietly to suppress installation messages
+library(pacman)
+
+#load other packages
+pacman::p_load(readxl,here)
+
 #auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-library(tidyverse)
-library(here)
+pacman::p_load(tidyverse)
+
+#==== IMPORT RANKINGS DATA ====
+#set original data folder path
+data.path <- here("data","original data")
+df.rank <- read_excel(here(data.path, "USNWR.xlsx"))
 
 #==== IMPORT ADM DATA ====
-#set ADM file path
-folder.path <- here("data","original data","IPEDS","ADM")
+#build ADM folder path
+folder.path <- here(data.path,"IPEDS","ADM")
 
 #get list of files in ADM folder
 lf <- list.files(folder.path)
 
+#read files and add year variable
 ##initialize dataframe
 ll <- 1
-df <- read_csv(here(folder.path,lf[ll])) |>
+df <- read_csv(here(folder.path,lf[ll])) |> 
   mutate(year = lf[ll] |> str_extract("\\d{4}+"))
 
 ##loop over remaining files
@@ -462,7 +648,7 @@ for (ll in 2:length(lf)){
   #read file and add year variable
   df2 <- read_csv(here(folder.path,lf[ll])) |>
     mutate(year = lf[ll] |> str_extract("\\d{4}+"))
-
+  
   #bind to exisiting dataframe
   df <- df |> bind_rows(df2)
 }
@@ -550,7 +736,7 @@ There are `r df.hd |> count(STABBR) |> nrow()` "states" in the sample despite th
 df.hd |> filter(STABBR %in% state.abb) |> nrow()
 ```
 
-`df.hd` has `r df.hd |> nrow())` rows before but the filter reduces it to `r (df.hd |> filter(STABBR %in% state.abb) |> nrow())` and we've lost `r (df.hd |> nrow()) - (df.hd |> filter(STABBR %in% state.abb) |> nrow())` observations by dong this. Let's see what we've lost.
+`df.hd` has `r df.hd |> nrow()` rows before but the filter reduces it to `r (df.hd |> filter(STABBR %in% state.abb) |> nrow())` and we've lost `r (df.hd |> nrow()) - (df.hd |> filter(STABBR %in% state.abb) |> nrow())` observations by dong this. Let's see what we've lost.
 
 R's logical negation operator is `!` and it, more or less, flips a true/false evaluator. For example ask `x == 2` asks R: is x equal to 2? If x has a value (maybe assigned with `x <- 2`) then R will respond with `TRUE` or `FALSE`. If you want to ask the opposite – is x *not equal* to 2 – you use the logical negation, `x != 2`.
 
@@ -559,22 +745,4 @@ R's logical negation operator is `!` and it, more or less, flips a true/false ev
 df.hd |> filter(!(STABBR %in% state.abb)) |>  count(STABBR) |> print(n=Inf)
 ```
 
-This shows that we have nine "states" that are actually not U.S. states. It turns out, Puerto Rico has `r df.hd |> filter(STABBR == "PR") |> nrow()` schools. Who knew?
-
-### Combine Dataframes
-
-Let's proceed to the next step and combine the IPEDS dataframes. We will add to the workflow script we've already started
-
-Once you have a clean, checked dataframe for one survey, save it to `data/saved data/` — from then on, your analysis scripts can just load that one file instead of re-running the import every time, which makes it much easier to clear your environment and start fresh when you're working on the model itself. Repeat this same workflow (import, automate, check with `datasummary_skim()`) for the HD and EF-C surveys, then join them all together on `UNITID` — the institution ID IPEDS uses consistently across every survey — with `left_join()`. Use a left join starting from whichever dataframe defines your sample (ADM, since that's your outcome variable) so you don't accidentally drop institutions just because they're missing from a survey you joined in later.
-
-## Make Variables
-
-Split this into three kinds of variables, and build them in that order:
-
-- **Outcome variables** — the female applicant share (`women_share`), and later, the out-of-state enrollment share for the extension.
-- **Policy variables** — which states banned abortion. This doesn't come from IPEDS; merge it in using `STABBR`, the state abbreviation.
-- **Control variables** — the original paper doesn't use any. Should you add any anyway? Worth thinking through before you decide either way — and worth explaining your reasoning in the write-up regardless of which way you land.
-
-## Clean Data
-
-Restrict your sample to match the paper as closely as you can: the top-100 ranked schools, 2018–2022. There isn't much more to do here beyond that filtering step and making sure your variable names are consistent going into the analysis.
+This shows that we have `r df.hd |> filter(!(STABBR %in% state.abb)) |> count(STABBR) |> nrow()` "states" that are actually not U.S. states. It turns out, Puerto Rico has `r df.hd |> filter(STABBR == "PR") |> nrow()` schools. Who knew?

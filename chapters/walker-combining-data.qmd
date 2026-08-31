@@ -1,0 +1,17 @@
+# Combining Data
+
+Let's proceed to the next step and combine the IPEDS dataframes. We will add to the workflow script we've already started
+
+Once you have a clean, checked dataframe for one survey, save it to `data/saved data/` — from then on, your analysis scripts can just load that one file instead of re-running the import every time, which makes it much easier to clear your environment and start fresh when you're working on the model itself. Repeat this same workflow (import, automate, check with `datasummary_skim()`) for the HD and EF-C surveys, then join them all together on `UNITID` — the institution ID IPEDS uses consistently across every survey — with `left_join()`. Use a left join starting from whichever dataframe defines your sample (ADM, since that's your outcome variable) so you don't accidentally drop institutions just because they're missing from a survey you joined in later.
+
+## Make Variables
+
+Split this into three kinds of variables, and build them in that order:
+
+- **Outcome variables** — the female applicant share (`women_share`), and later, the out-of-state enrollment share for the extension.
+- **Policy variables** — which states banned abortion. This doesn't come from IPEDS; merge it in using `STABBR`, the state abbreviation.
+- **Control variables** — the original paper doesn't use any. Should you add any anyway? Worth thinking through before you decide either way — and worth explaining your reasoning in the write-up regardless of which way you land.
+
+## Clean Data
+
+Restrict your sample to match the paper as closely as you can: the top-100 ranked schools, 2018–2022. There isn't much more to do here beyond that filtering step and making sure your variable names are consistent going into the analysis.

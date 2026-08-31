@@ -15,6 +15,7 @@ book:
       chapters:
         - chapters/walker-introduction.qmd
         - chapters/walker-data-processing.qmd
+        - chapters/walker-combining-data.qmd
         - chapters/walker-analysis.qmd
 
 bibliography: references.bib
