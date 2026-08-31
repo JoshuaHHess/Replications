@@ -1,8 +1,10 @@
-# Introduction
+# Introduction  {#sec-introduction-r}
 
 This book teaches empirical replication through short, self-contained exercises. Each one asks you to rebuild a published paper's results, then write up what replicated, what didn't, and why. Undergraduate econometrics is recommended but not required.
 
 Before the first exercise, get your tools set up. Do this once, carefully, and every exercise after this one starts from the same foundation.
+
+This book is a work in progress. The Walker unit currently covers the paper itself and data processing; the combining-data and analysis steps are still being written and aren't in the book yet.
 
 ## Install R and RStudio
 
@@ -17,7 +19,7 @@ Open RStudio, not R directly, for everything in this book.
 
 Git is a program that helps keep track of your code changes. It's a bit like "track changes" in microsoft word, but much more useful. GitHub hosts this on the cloud so that you can recover your work if you accidentally delete something, your machine dies, or if you want your partner to get the most recent version.
 
-Honestly, Git and GitHub are **not** easy to wrap your head around. But, once you get it set up and you get in the habit of 'commits' and 'pushes' you'll find it useful. 
+Honestly, Git and GitHub are **not** easy to wrap your head around. But, once you get it set up and you get in the habit of 'commits' and 'pushes' you'll find it useful.
 
 1.  Sign up at [github.com](https://github.com).
 2.  Turn on two-factor authentication (Settings → Password and authentication).

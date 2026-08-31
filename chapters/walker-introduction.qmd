@@ -1,4 +1,4 @@
-# Introduction
+# Introduction {#sec-walker-introduction}
 
 This unit walks through a replication of @walker2023anticipatory, which asks whether the anticipated repeal of *Roe v. Wade* changed the share of female freshman applicants at selective U.S. universities, comparing states where abortion became banned to states where it remained legal.
 

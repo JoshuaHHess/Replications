@@ -1,4 +1,4 @@
-# Combining Data
+# Combining Data {#sec-walker-combining-data}
 
 Let's proceed to the next step and combine the IPEDS dataframes. We will add to the workflow script we've already started
 

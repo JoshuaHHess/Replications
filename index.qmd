@@ -1,12 +1,53 @@
-# Replication Text
+# About this Text
 
-This book teaches empirical replication for advanced undergraduates. Undergraduate econometrics is not required but strongly recommended.
+There are a lot of texts intended to teach students. This isn't one of them. This text is for an apprentice.
 
-Each unit is a short, self-contained replication exercise. Materials for each one — data, scripts, and the write-up — live together under `exercises/`.
+A student solves problems with known answers. An apprentice builds something real, and finds out whether it holds up.
 
-- Chapter 1, Introduction, frames the course and how AI may be used.
-- `exercises/01-walker/` is the first replication exercise, built around Walker et al. [-@walker2023anticipatory].
+A student is told which tool to use. An apprentice has to learn which tools to use and why.
 
-## Workflow
+A student is wrong and moves on. An apprentice is wrong and has to ask why.
 
-For each exercise: do the replication first, then write it up. The write-up should be short.
+There are a lot of texts that teach students how to use R and Git, econometrics, etc. But, those are the tools of economists. Rather than teach the tools, this text puts you to work on a real replication and makes you reach for the tools because the work demands them.
+
+An apprentice carpenter doesn't get a lesson on a hammer, then a lesson on a saw, then a lesson on a level, each checked off before they're allowed to build anything. They get a project and learn how to use the tools as needed.
+
+As such, you won't get a chapter on R, then an exercise on R, then a chapter on Git, then an exercise on Git. You get a paper to replicate and we'll talk about the tools as we go.
+
+## Replications in Economics
+
+Replication is not a trivial task. It takes real work to rebuild someone else's results, and the work is real precisely because it's required by scientific progress. A result that no one has checked isn't yet knowledge — it's a claim. Economics, like a lot of fields, has learned this the hard way: there's a well-documented replication crisis, where a meaningful share of published results don't hold up when someone else tries to reproduce them. Some of that comes from honest ambiguity in how a paper is written. Some of it comes from something worse.
+
+When your replication succeeds, that's confirmation — both of the original finding, and of your own understanding. If you can rebuild the result, you've demonstrated you actually understand the method well enough to reproduce it, not just read about it.
+
+When your replication doesn't succeed, that's not a failure. It's often the more interesting outcome. A non-replication tells you something real is worth investigating: was a step in the original paper unclear or missing? Did the data or context change in a way that matters? Did the original result depend on a choice that turns out to be fragile? Figuring out *why* something doesn't replicate is its own skill, and often teaches you more than a clean success would have.
+
+Either way, doing a replication means doing a deep dive into the original project's choices and assumptions — which sample they used, which controls they included, which years they dropped, which model they picked and why. Some of those choices will look completely reasonable. Some won't. Sitting with that second group — asking whether a choice was actually justified, or just convenient — is usually where an original extension is hiding.
+
+## Using AI
+
+Large Language Models (LLMs) or Artificial Intelligence (AI) are useful tools. As such, it is expected you will use them in your process. If you had the necessary data, you could probably get an advanced AI model to do the replication for you. I want to point out a couple of flaws in the plan.
+
+First, AI makes mistakes. You have to be skilled to find them. This text is for building skill sets not finishing projects. Professional carpenters use nail guns when they can, but you better believe they have hammer skills.
+
+Second, AI is expensive. Employers will need to make decision about how much to spend on labor and how much to spend on AI. You'd probably prefer they pay a lot of money for your work instead of a lot of money for AI.
+
+Third, AI isn't good at asking high-level questions. Those questions start to occur when you deeply understand something. So, AI can do the replication, but it's not natural for it to think of an extension or challenge assumptions. That's what humans do.
+
+**THAT SAID**, AI is great for leaning to code. In the old days, coders would pour through manuals or chatboards trying to troubleshoot. You would have to read (virtually incomprehensible) code documentation to figure out an esoteric function. AI does that for you and it's really good at it. You can, and should, drop errors or code snippets or questions into AI and ask for help. Low-grade, cheap/free models usually work fine. Instead of blithely copying and pasting results. Ask AI what the code does and don't let up until you get it.
+
+## This is a Work in Progress
+
+This text is a work in progress and I'm carving out spare time to update it when I can. Please be patient.
+
+The current structure is
+
+1.  @sec-introduction-r discusses the inquiry approach, the tools, and general setup workflow
+
+2.  @sec-walker-introduction introduces the @walker2023anticipatory paper and the replication setup and data
+
+3.  @sec-walker-data-importing walks through importing the data and the associated coding tools
+
+4.  Combining Data (in progress, not yet in the book) will show how to merge the data, create variable (outcome and policy), and save it
+
+5.  Analysis (in progress, not yet in the book) will work through the analysis and generation of results

@@ -1,4 +1,4 @@
-# Analysis
+# Analysis {#sec-walker-analysis}
 
 Before you run anything, it's worth understanding *why* the model needs three separate fixed effects, not just trusting the output once it runs.
 
