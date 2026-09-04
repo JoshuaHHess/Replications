@@ -18,11 +18,11 @@ Read the paper ([PDF](files/walker2023anticipatory.pdf)). First, notice how the 
 
 Also note the *Methods* section has two subsections: *Data* and *Empirical approach*. Their data comes from the Common Data Set (CDS) and collected by hand where necessary. This replication exercise will use a similar panel from IPEDS, a public data source that gets us most of the way there with far less manual data entry. Second, notice how the results are presented. The empirical approach is the so-called two-way fixed effects (TWFE) model. It's shown in Equation 1 and replicated here.
 
-$$Y_{ijt} = \sum_{t = -3 \\ t \neq 0}^{t = +1} \left(\alpha_{ijt} \cdot Repeal_j \cdot Year(t) \right) + \tau_t + \delta_i + \varphi_j$$
+$$Y_{ijt} = \sum_{t = -3 \\ t \neq 0}^{t = +1} \left(\alpha_{ijt} \cdot Repeal_j \cdot Year(t) \right) + \tau_t + \delta_i + \varphi_j + \varepsilon_{ijt}$$
 
 You'll need to have an understanding of this equation to understand how the results are presented in the paper. So, let's re-write this equation to be more explicit. Let's call the outcome variable *Share* and be explicit that time runs from 2018 to 2022.
 
-$$Share_{ijt} = \sum_{t = 2018 \\ t \neq 2021}^{t = 2022} \left(\alpha_{ijt} \cdot Repeal_j \cdot Year(t) \right) + \tau_t + \delta_i + \varphi_j$$
+$$Share_{ijt} = \sum_{t = 2018 \\ t \neq 2021}^{t = 2022} \left(\alpha_{ijt} \cdot Repeal_j \cdot Year(t) \right) + \tau_t + \delta_i + \varphi_j+ \varepsilon_{ijt}$$
 
 Now, let's write out the terms buried in the summation. Instead of one compact term with a $t$ running underneath it, write one term per year, leaving out 2021 — that's the reference year everything else gets compared to, which is why $t \neq 2021$ appears under the summation above.
 
@@ -31,7 +31,7 @@ Share_{ijt} = \; & \alpha_{2018} \cdot Repeal_j \cdot Year_{2018} \\
 + \; & \alpha_{2019} \cdot Repeal_j \cdot Year_{2019} \\
 + \; & \alpha_{2020} \cdot Repeal_j \cdot Year_{2020} \\
 + \; & \alpha_{2022} \cdot Repeal_j \cdot Year_{2022} \\
-+ \; & \tau_t + \delta_i + \varphi_j
++ \; & \tau_t + \delta_i + \varphi_j+ \varepsilon_{ijt}
 \end{aligned}$$
 
 $Repeal_j$ is an indicator (sometimes called dummy) variable. Indicator variables only have two values, 1 or 0, and indicate whether a given observation belongs to a particular category. $Repeal_j$ is 1 if state $j$ will be affected by the repeal of Roe v. Wade and a 0 otherwise. For example, Arkansas had a "trigger law" that would ban abortions if Roe v. Wade was overturned so that $Repeal_{j = AR} = 1$ and Colorado had legal protections in place ensuring access meaning $Repeal_{j = CO} = 0$.
