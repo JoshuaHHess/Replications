@@ -7,8 +7,6 @@
 rm(list = ls())
 source(here("scripts","data processing","import data.R"))
 rm(data.path)
-.raw <- list(rank = df.rank, adm = df.adm, hd = df.hd, policy = df.policy)
-
 ```
 
 At the end of @sec-walker-data-importing we had four dataframes: `df.adm` (applications), `df.hd` (directory information), `df.rank` (rankings), and `df.policy` (state policy).
@@ -21,7 +19,7 @@ Ultimately, we want *one* dataframe, with one row per school per year, that has:
 
 - and variables that will be used to show how the outcomes might differ by group – heterogeneous impacts.
 
-Restricting that dataframe to the paper's sample – cleaning – is its own job, and gets its own chapter. This chapter just builds the variables. This gets its own script. Make a new R script in `scripts/data processing` and call it *make variables.R*.
+This chapter just builds the variables, in that order. Like before, the goal is to generate a readbale and workflow.
 
 ## Recall the Dataframes
 
@@ -47,7 +45,13 @@ Let's start our script!
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 ```
 
-## Combine the IPEDS Dataframes
+## Policy Variable
+
+Generally, we want to study the impact of a policy on some outcome. In this context, the impact of *bans* on the *share of women applicants*.
+
+The policy data comes from Table 1 in @walker2023anticipatory, which we (or AI) turned into a spreadsheet and imported as `df.policy` – one row per *state*. That's the catch. The policy is a property of a state, and `df.adm` doesn't know what state a school is in. That information is in `df.hd`. So before we can attach the policy, we have to combine the two IPEDS dataframes.
+
+### Combine the IPEDS Dataframes
 
 ::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `left_join()` and `join_by()`
@@ -56,7 +60,7 @@ source(here("scripts","data processing","import data.R")) #or whatever you named
 
 `df.adm` has the applications and `df.hd` has the state. In both, a row is a *school-year* – one school in one year. UNITID identifies the school, `year` identifies the year, and together they identify the row. Variables that identify rows are called *keys*. Combining dataframes side by side – adding columns rather than stacking rows like `bind_rows()` did – is called a *join*, and it's done by matching on keys.
 
-Recall that `df.hd` is very wide, and we only need a few things from it. So, before joining, use `select()` to keep the keys plus the school name, the state, and a couple of cheap-to-carry variables that could be useful later (`FIPS` is the state code, `CONTROL` is public/private, and `INSTCAT` is the degree-granting category).
+`df.hd` is very wide – dozens of columns of directory information – and right now we only need the state. We'll bring all of it along anyway. Columns are cheap to carry, and some of them (`CONTROL` is public/private, `INSTCAT` is the degree-granting category) may turn out to be useful for heterogeneity later. Deciding what to drop is cleaning, not combining.
 
 Now the join. There are several kinds (more on that shortly), but the workhorse is `left_join()`. It keeps *every* row of the dataframe on the left and adds columns from the dataframe on the right that match a row on the left. Since the applications define our sample, `df.adm` goes on the left. The keys go in `join_by()`.
 
@@ -65,14 +69,14 @@ Here's a first try that makes the most common mistake – only using one key.
 ```{r}
 #| label: demo-join-wrong
 #| warning: true
-df.adm |> left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID)) |> nrow()
+df.adm |> left_join(df.hd, join_by(UNITID)) |> nrow()
 ```
 
 ```{r}
 #| label: silent-n-wrong
 #| include: false
 .n.wrong <- suppressWarnings(
-  df.adm |> left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID)) |> nrow())
+  df.adm |> left_join(df.hd, join_by(UNITID)) |> nrow())
 ```
 
 Two things happened. R warned about a "many-to-many relationship," and we ended up with `r .n.wrong` rows when `df.adm` only has `r nrow(df.adm)`. Each school-year in `df.adm` matched *every* year for that school in `df.hd`, so every row got copied five times. If the warning doesn't make sense, paste it into AI and ask.
@@ -90,7 +94,7 @@ Join on `UNITID` alone and that one school balloons to 25 rows – every one of 
 #| label: demo-one-school-after
 #| warning: false
 df.adm |> filter(UNITID == 100654) |>
-  left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID)) |>
+  left_join(df.hd, join_by(UNITID)) |>
   select(UNITID, year.x, year.y, INSTNM)
 ```
 
@@ -98,21 +102,14 @@ Note the two `year` columns – `year.x` from `df.adm`, `year.y` from `df.hd` �
 
 ```{r}
 #| label: demo-join-correct
-df.adm |> left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID, year)) |> nrow()
+df.adm |> left_join(df.hd, join_by(UNITID, year)) |> nrow()
 ```
 
 Add this to the workflow.
 
 ```{r}
-#| label: silent-reset-combine
+#| label: silent-combine
 #| include: false
-df.rank <- .raw$rank; df.adm <- .raw$adm; df.hd <- .raw$hd; df.policy <- .raw$policy
-
-#==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
-#add directory information to the applications data
 df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 ```
 
@@ -123,9 +120,6 @@ df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
 #add directory information to the applications data
 df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 
@@ -156,17 +150,8 @@ Numbers stored as text are the most common silent bug in imported data. Check th
 :::
 
 ```{r}
-#| label: silent-reset-year
+#| label: silent-year
 #| include: false
-df.rank <- .raw$rank; df.adm <- .raw$adm; df.hd <- .raw$hd; df.policy <- .raw$policy
-#==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
-#add directory information to the applications data
-df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
-
-#year was extracted from the file name as text; make it a number
 df <- df |> mutate(year = as.numeric(year))
 ```
 
@@ -177,9 +162,6 @@ df <- df |> mutate(year = as.numeric(year))
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
 #add directory information to the applications data
 df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 
@@ -193,7 +175,7 @@ df <- df |> mutate(year = as.numeric(year))
 class(df$year)
 ```
 
-## Outcome and Policy Variables
+### The Policy Indicator
 
 ::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - renaming inside `select()`: `select(new = old)`
@@ -203,48 +185,7 @@ class(df$year)
 - `count()`
 :::
 
-In this section we generate the two main variables of interest. Generally, we want to study the impact of a policy on some outcome. In this context, the impact of *bans* on the *share of women applicants*.
-
-### Outcome
-
-The outcome in @walker2023anticipatory is the women's share of applicants. We have the number of women applicants (APPLCNW) and the number of men applicants (APPLCNM), so the share is
-
-$$wshare = \frac{APPLCNW}{APPLCNW + APPLCNM}$$
-
-Why not divide by the total number of applicants, APPLCN? Because IPEDS allows schools to report applicants of another or unknown gender, so APPLCN can be larger than women plus men. Women over women-plus-men is the cleaner match to the paper. This is a `mutate()`.
-
-```{r}
-#| label: demo-wshare
-df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM)) |> select(wshare) |> datasummary_skim()
-```
-
-A share should live between 0 and 1, and it does. The mean is a bit above one half, which is what we expect – women have been the majority of college applicants for a while. Some school-years are missing because a school reported zero (or nothing) for both, which makes the share undefined. We'll deal with those in the next chapter, when we clean the data.
-
-Let's add the outcome variable to our workflow.
-
-```{r}
-#| label: workflow-outcome
-#| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
-
-#==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
-#add directory information to the applications data
-df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
-
-#year was extracted from the file name as text; make it a number
-df <- df |> mutate(year = as.numeric(year))
-
-#==== OUTCOME VARIABLE ====
-df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
-```
-
-### Policy
-
-The policy variable comes from Table 1 in @walker2023anticipatory, which we (or AI) turned into a spreadsheet and imported as `df.policy`. Let's look at it.
+With the state attached to every school-year, we can bring in the policy. Have a look at `df.policy`.
 
 ```{r}
 #| label: demo-names-policy
@@ -330,17 +271,11 @@ Default to `left_join()` from the dataframe that defines your sample. `right_joi
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
 #add directory information to the applications data
 df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 
 #year was extracted from the file name as text; make it a number
 df <- df |> mutate(year = as.numeric(year))
-
-#==== OUTCOME VARIABLE ====
-df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
 
 #==== POLICY VARIABLE ====
 #generate repeal indicator and join it
@@ -392,21 +327,24 @@ Add this to the workflow. Make sure to check your rows!
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
 #add directory information to the applications data
 df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 
 #year was extracted from the file name as text; make it a number
 df <- df |> mutate(year = as.numeric(year))
 
-#==== OUTCOME VARIABLE ====
-df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
-
 #==== POLICY VARIABLE ====
 #generate repeal indicator and join it
 df <-  df.policy |>
+  select(STABBR = Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |>
+  right_join(df,join_by(STABBR))
+```
+
+```{r}
+#| label: silent-policy
+#| include: false
+df <- df.policy |>
   select(STABBR = Abbreviation, status = `Abortion Status`) |>
   mutate(repeal = if_else(status == "Banned",1,0)) |>
   right_join(df,join_by(STABBR))
@@ -427,6 +365,53 @@ df |> filter(is.na(repeal)) |> distinct(STABBR) |> pull(STABBR)
 ```
 
 They'll drop out on their own in the next chapter, when we restrict to ranked schools. If they didn't, we'd have to decide what to do with them.
+
+## Outcome Variable
+
+The outcome in @walker2023anticipatory is the women's share of applicants. We have the number of women applicants (APPLCNW) and the number of men applicants (APPLCNM), so the share is
+
+$$wshare = \frac{APPLCNW}{APPLCNW + APPLCNM}$$
+
+Why not divide by the total number of applicants, APPLCN? Because IPEDS allows schools to report applicants of another or unknown gender, so APPLCN can be larger than women plus men. Women over women-plus-men is the cleaner match to the paper. This is a `mutate()`.
+
+```{r}
+#| label: demo-wshare
+df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM)) |> select(wshare) |> datasummary_skim()
+```
+
+A share should live between 0 and 1, and it does. The mean is a bit above one half, which is what we expect – women have been the majority of college applicants for a while. Some school-years are missing because a school reported zero (or nothing) for both, which makes the share undefined. We'll deal with those in the next chapter, when we clean the data.
+
+Let's add the outcome variable to our workflow.
+
+```{r}
+#| label: workflow-outcome
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
+
+#==== COMBINE IPEDS DATA ====
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+#==== POLICY VARIABLE ====
+#generate repeal indicator and join it
+df <-  df.policy |>
+  select(STABBR = Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |>
+  right_join(df,join_by(STABBR))
+
+#==== OUTCOME VARIABLE ====
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
+```
+
+```{r}
+#| label: silent-outcome
+#| include: false
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM))
+```
 
 ## Heterogeneous Variables
 
@@ -558,17 +543,11 @@ Our current workflow is then:
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
-#keep the directory variables we need
-df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
-
 #add directory information to the applications data
 df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 
 #year was extracted from the file name as text; make it a number
 df <- df |> mutate(year = as.numeric(year))
-
-#==== OUTCOME VARIABLE ====
-df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
 
 #==== POLICY VARIABLE ====
 #generate repeal indicator and join it
@@ -577,6 +556,9 @@ df <-  df.policy |>
   mutate(repeal = if_else(status == "Banned",1,0)) |>
   right_join(df,join_by(STABBR))
 
+#==== OUTCOME VARIABLE ====
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
+
 #==== HETEROGENEOUS VARIABLES ====
 #select 2023 rank and join
 df <- df.rank |> select(UNITID=IPEDS,rank2023 = `2023`) |>
@@ -584,6 +566,10 @@ df <- df.rank |> select(UNITID=IPEDS,rank2023 = `2023`) |>
 
 ```
 
+## Save the Script
+
+The final step is to give the script a name – *make variables.R* – and save it in `scripts/data processing`.
+
 ## What's Next
 
-`df` now has one row per school-year with the outcome (*wshare*), the policy (*repeal*), and the heterogeneity variable (*rank2023*) – everything the analysis needs. What it doesn't have yet is the paper's *sample*. It still has every school IPEDS knows about, including the unranked ones, the not-really-states, and the school-years with an undefined share. Restricting to the paper's sample is cleaning, and that's the next chapter.
+`df` now has one row per school-year with the policy (*repeal*), the outcome (*wshare*), and the heterogeneity variable (*rank2023*) – everything the analysis needs. What it doesn't have yet is the paper's *sample*. It still has every school IPEDS knows about, including the unranked ones, the not-really-states, and the school-years with an undefined share. Restricting to the paper's sample is cleaning, and that's the next chapter.
