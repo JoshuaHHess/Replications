@@ -1,17 +1,654 @@
 # Combining Data {#sec-walker-combining-data}
 
-Let's proceed to the next step and combine the IPEDS dataframes. We will add to the workflow script we've already started
+```{r}
+#| label: silent-setup
+#| include: false
 
-Once you have a clean, checked dataframe for one survey, save it to `data/saved data/` — from then on, your analysis scripts can just load that one file instead of re-running the import every time, which makes it much easier to clear your environment and start fresh when you're working on the model itself. Repeat this same workflow (import, automate, check with `datasummary_skim()`) for the HD and EF-C surveys, then join them all together on `UNITID` — the institution ID IPEDS uses consistently across every survey — with `left_join()`. Use a left join starting from whichever dataframe defines your sample (ADM, since that's your outcome variable) so you don't accidentally drop institutions just because they're missing from a survey you joined in later.
+rm(list = ls())
+source(here("scripts","data processing","import data.R"))
+rm(data.path)
+.raw <- list(rank = df.rank, adm = df.adm, hd = df.hd, policy = df.policy)
+
+```
+
+At the end of @sec-walker-data-importing we had four dataframes: `df.adm` (applications), `df.hd` (directory information), `df.rank` (rankings), and `df.policy` (state policy). What we want is *one* dataframe with one row per school per year that has the outcome, the policy indicator, and the ranking, restricted to the sample in @walker2023anticipatory, and saved in `data/saved data` so the analysis scripts can load it and get to work.
+
+That's the remaining three steps – combine the data, make the variables, clean the data – plus saving. This gets its own script. Make a new R script in `scripts/data processing` and call it *combine data.R*.
+
+## Recall the Dataframes
+
+::: {.callout-note appearance="minimal"}
+## Coding Learning Objectives
+
+- `source()`
+:::
+
+Empirical projects can get overwhelming. There is simply *so much* to do. One way to help with that is to focus on small tasks and write self-contained scripts. Think of this as chapters in your book. Each chapter advances the story in a way that is well-described by the chapter title. At the end of @sec-walker-data-importing, we saved *import data.R* in `scripts/data processing`. That script generated four dataframes (it might be good to go back and add a comment at the top of the script as to what it does so future you doesn't have to read the whole thing to figure out!).
+
+Now, we need those four dataframes in our *Environment* (upper right of Rstudio) in order to combine them. Let's assume you've taken a (well-deserved) break after generating *import data.R*, closed down R, and have just re-opened it. You can get the dataframes back into your *Environment* by opening *import data.R* and running the script with Code –\> Run Region –\> Run All. Intuitively, you are going to the script that is the origin, or source, of the dataframes. Fortunately, R provides a way to automate that -- `source()` -- which takes a file path as an argument and executes the file verbatim.
+
+::: callout-tip
+## Coding Practices: `source()`
+
+Keep scripts as separate files whose name (or path) indicates what they do. Call the scripts with `source()`.
+:::
+
+Let's start our script!
+
+```{r}
+#| label: demo-source
+#| eval: false
+
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+```
+
+## Combine the IPEDS Dataframes
+
+::: {.callout-note appearance="minimal"}
+## Coding Learning Objectives
+
+- `select()`
+- `left_join()` and `join_by()`
+- `as.numeric()` and variable types
+:::
+
+`df.adm` has the applications and `df.hd` has the state. In both, a row is a *school-year* – one school in one year. UNITID identifies the school, `year` identifies the year, and together they identify the row. Variables that identify rows are called *keys*. Combining dataframes side by side – adding columns rather than stacking rows like `bind_rows()` did – is called a *join*, and it's done by matching on keys.
+
+Recall that `df.hd` is very wide, and we only need a few things from it. So, before joining, use `select()` to keep the keys plus the school name, the state, and a couple of cheap-to-carry variables that could be useful later (`FIPS` is the state code, `CONTROL` is public/private, and `INSTCAT` is the degree-granting category).
+
+Now the join. There are several kinds (more on that shortly), but the workhorse is `left_join()`. It keeps *every* row of the dataframe on the left and adds columns from the dataframe on the right that match a row on the left. Since the applications define our sample, `df.adm` goes on the left. The keys go in `join_by()`.
+
+Here's a first try that makes the most common mistake – only using one key.
+
+```{r}
+#| label: demo-join-wrong
+#| warning: true
+df.adm |> left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID)) |> nrow()
+```
+
+```{r}
+#| label: silent-n-wrong
+#| include: false
+.n.wrong <- suppressWarnings(
+  df.adm |> left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID)) |> nrow())
+```
+
+Two things happened. R warned about a "many-to-many relationship," and we ended up with `r .n.wrong` rows when `df.adm` only has `r nrow(df.adm)`. Each school-year in `df.adm` matched *every* year for that school in `df.hd`, so every row got copied five times. If the warning doesn't make sense, paste it into AI and ask.
+
+Look at just one school to see it happen. Alabama A&M (UNITID 100654) has one row per year in each dataframe – five rows, five years.
+
+```{r}
+#| label: demo-one-school-before
+df.adm |> filter(UNITID == 100654) |> select(UNITID, year, APPLCN)
+```
+
+Join on `UNITID` alone and that one school balloons to 25 rows – every one of its five years in `df.adm` matched against every one of its five years in `df.hd`.
+
+```{r}
+#| label: demo-one-school-after
+#| warning: false
+df.adm |> filter(UNITID == 100654) |>
+  left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID)) |>
+  select(UNITID, year.x, year.y, INSTNM)
+```
+
+Note the two `year` columns – `year.x` from `df.adm`, `year.y` from `df.hd` – dplyr's way of telling you *this column existed on both sides and I didn't know which one you meant*, which is itself a sign something is off. Every `year.x` is now paired with every possible `year.y`, which is exactly the bug. Note that R only *warned* – it didn't stop – so if you weren't paying attention, you'd carry on with a dataframe five times too big. Adding `year` to the key fixes it. Generally, the *`.x`* and `.y` suffixes indicate a *join* did not go as intended.
+
+```{r}
+#| label: demo-join-correct
+df.adm |> left_join(df.hd |> select(UNITID, year, INSTNM, STABBR), join_by(UNITID, year)) |> nrow()
+```
+
+Add this to the workflow.
+
+```{r}
+#| label: silent-reset-combine
+#| include: false
+df.rank <- .raw$rank; df.adm <- .raw$adm; df.hd <- .raw$hd; df.policy <- .raw$policy
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+```
+
+```{r}
+#| label: workflow-combine
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+
+```
+
+One more thing before we move on. Have a look at `year`.
+
+```{r}
+#| label: demo-class-year
+class(df$year)
+```
+
+It's a *character* – text. That's because `str_extract()` pulls text out of text, so we got `"2018"` and not `2018`. Comparisons will often still work (R quietly converts the number to text to compare them), which is exactly what makes this bug sneaky. It hides until you try to do math.
+
+```{r}
+#| label: demo-year-error
+#| error: true
+df$year[1] + 1
+```
+
+Convert it with `as.numeric()` inside `mutate()`.
+
+::: {.callout-tip title="Coding Practices: Know Your Types"}
+Every variable has a type. The ones you'll see most are *numeric* (numbers), *character* (text), and *logical* (`TRUE`/`FALSE`). Check with `class()`.
+
+Numbers stored as text are the most common silent bug in imported data. Check the types of your key variables before you use them.
+:::
+
+```{r}
+#| label: silent-reset-year
+#| include: false
+df.rank <- .raw$rank; df.adm <- .raw$adm; df.hd <- .raw$hd; df.policy <- .raw$policy
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+```
+
+```{r}
+#| label: workflow-year
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+```
+
+```{r}
+#| label: demo-class-year-fixed
+class(df$year)
+```
 
 ## Make Variables
 
-Split this into three kinds of variables, and build them in that order:
+::: {.callout-note appearance="minimal"}
+## Coding Learning Objectives
 
-- **Outcome variables** — the female applicant share (`women_share`), and later, the out-of-state enrollment share for the extension.
-- **Policy variables** — which states banned abortion. This doesn't come from IPEDS; merge it in using `STABBR`, the state abbreviation.
-- **Control variables** — the original paper doesn't use any. Should you add any anyway? Worth thinking through before you decide either way — and worth explaining your reasoning in the write-up regardless of which way you land.
+- `mutate()`
+- `if_else()`
+- `right_join()` and `join_by()` with `==`
+:::
+
+We need two variables: the outcome and the policy indicator.
+
+### Outcome
+
+The outcome in @walker2023anticipatory is the women's share of applicants. We have the number of women applicants (APPLCNW) and the number of men applicants (APPLCNM), so the share is
+
+$$wshare = \frac{APPLCNW}{APPLCNW + APPLCNM}$$
+
+Why not divide by the total number of applicants, APPLCN? Because IPEDS allows schools to report applicants of another or unknown gender, so APPLCN can be larger than women plus men. Women over women-plus-men is the cleaner match to the paper. This is a `mutate()`.
+
+```{r}
+#| label: demo-wshare
+df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM)) |> select(wshare) |> datasummary_skim()
+```
+
+A share should live between 0 and 1, and it does. The mean is a bit above one half, which is what we expect – women have been the majority of college applicants for a while. Some school-years are missing because a school reported zero (or nothing) for both, which makes the share undefined. We'll deal with those when we clean.
+
+Let's add the outcome variable to our workflow.
+
+```{r}
+#| label: workflow-outcome
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+#==== OUTCOME VARIABLE ====
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
+```
+
+### Policy
+
+The policy variable comes from Table 1 in @walker2023anticipatory, which we (or AI) turned into a spreadsheet and imported as `df.policy`. Let's look at it.
+
+```{r}
+#| label: demo-names-policy
+names(df.policy)
+```
+
+Most *tidyverse* functions can handle a column name without quotations. That is `select(UNITID)` knows you are referring to a column name. However, this doesn't work if the names are numbers or has spaces. Then, you'll have to wrap the name in backticks – `` `Abortion Status` or `2021` ``– when you reference it. In @sec-walker-combining-data, we briefly discussed `select()`. Now we'll use it again with an additional functionality. Not only does `select()` keep the specified column in the specified order, you can rename them with `new = old,` as well!
+
+```{r}
+#| label: demo-select-with-namechange
+#| eval: false
+df.policy |> select(Abbreviation, status = `Abortion Status`)
+```
+
+After that, we can construct our policy indicator. The "Banned" states are the treatment group and everything else – including the states where a ban was blocked in court – is control. So, $Repeal_j$ from the paper is an indicator (or dummy) variable that is 1 for states that would be affected by the repeal of Roe v. Wade -- status is "Banned" in our data -- and a 0 otherwise. We need to make this variable from existing variables, `mutate()` it, so that **if** the *Abbreviation* has "Banned" in *status* it gets a 1 and **else** it gets a 0.
+
+::: {.callout-tip title="Coding Practices: Indicators and `if_else()`"}
+You can mutate an **indicator** variable with `if_else().`
+
+`if_else(condition, value if TRUE, value if FALSE)` takes three arguments – a condition, a value for `TRUE`, and a value for `FALSE` – and returns one of the two values, row by row.
+
+```{r}
+#| label: demo-ifelse
+#| eval: false
+if_else(status == "Banned", 1, 0)
+```
+:::
+
+Combining the `select()` with the `mutate()` we have
+
+```{r}
+#| label: demo-select-ifelse
+#| eval: false
+df.policy |> 
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0))
+```
+
+Notice that we make changes to `df.policy` without assigning the changes/saving them. This means the `df.policy` dataframe in the *Environment* is the same as when it was when it was created. This is nice because it allows is to add the variable *repeal to* `df` without changing `df.policy`. Let's try to keep it this way.
+
+There are two ways we could perform the `join` that will bring in *repeal* to `df`. Using the `left_join()` entails operating on `df.policy` within the `join` like this
+
+```{r}
+#| label: demo-left-join-within
+#| eval: false
+df <- df |> left_join(
+  df.policy |> 
+    select(Abbreviation, status = `Abortion Status`) |>
+    mutate(repeal = if_else(status == "Banned",1,0))
+)
+```
+
+This takes only the rows on the left -- those in `df` -- and joins them to the rows on the right, a dataframe of states and repeal status.
+
+On the other hand, we could operate on `df.policy` first and then `join` it to `df`. We want the same outcome as the `left_join()` but we want to keep only the rows that are now on the right. This is done with a `right_join()`.
+
+```{r}
+#| label: demo-right-join
+#| eval: false
+df <-  df.policy |> 
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |> 
+  right_join(df)
+```
+
+The resulting dataframes should contain the same columns (though they'll have different orders since `join` try to preserve order) and the same rows. I will use the `right_join()` since it seems more readable to me.
+
+```{r}
+#| label: workflow-right-join
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+#==== OUTCOME VARIABLE ====
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
+
+#==== POLICY VARIABLE ====
+#generate repeal indicator and join it
+df <-  df.policy |> 
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |> 
+  right_join(df)
+```
+
+```{r}
+#| label: workflow-right-join-error
+#| error: true
+df <-  df.policy |>
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |>
+  right_join(df)
+```
+
+This one doesn't even produce a wrong answer – it refuses to run at all. Every dplyr join needs to know which column(s) to match on. When you don't supply `join_by()`, dplyr falls back to a *natural join*: it looks for columns with the exact same name on both sides and uses those. `df.policy` (after our `select()`) has `Abbreviation`; `df` has `STABBR`. Two different names for the same idea, so there's nothing for dplyr to find, and – **unlike** the many-to-many *warning* from earlier – this is treated as serious enough to stop the script outright rather than guess.
+
+`join_by()` doesn't require the columns to share a name. Tell it explicitly which column on the left matches which column on the right with `==`, and it doesn't matter that they're spelled differently.
+
+```{r}
+#| label: workflow-right-join-noerror
+#| eval: false
+df <-  df.policy |>
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |>
+  right_join(df,join_by(Abbreviation == STABBR))
+```
+
+Add this to the workflow. Make sure to check your rows!
+
+```{r}
+#| label: workflow-variables
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+#==== OUTCOME VARIABLE ====
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
+
+#==== POLICY VARIABLE ====
+#generate repeal indicator and join it
+df <-  df.policy |>
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |>
+  right_join(df,join_by(Abbreviation == STABBR))
+```
+
+Check the result with `count()`.
+
+```{r}
+#| label: demo-count-repeal
+df |> count(repeal)
+```
+
+There are `r df |> filter(is.na(repeal)) |> nrow()` school-years with no policy. Those are the not-really-states from the last chapter.
+
+```{r}
+#| label: demo-na-repeal
+df |> filter(is.na(repeal)) |> distinct(STABBR) |> pull(STABBR)
+```
+
+They'll drop out on their own when we restrict to ranked schools. If they didn't, we'd have to decide what to do with them.
 
 ## Clean Data
 
-Restrict your sample to match the paper as closely as you can: the top-100 ranked schools, 2018–2022. There isn't much more to do here beyond that filtering step and making sure your variable names are consistent going into the analysis.
+::: {.callout-note appearance="minimal"}
+## Coding Learning Objectives
+
+- `right_join()`
+- `filter(!is.na())`
+- `%in%`
+- `group_by()` and `ungroup()`
+- `n_distinct()` and `all()`
+:::
+
+Cleaning means restricting the sample to match the paper. There are four restrictions.
+
+1.  **Ranked schools.** @walker2023anticipatory restrict their sample to the top 100 national universities in the 2023 U.S. News & World Report rankings (104 schools, because of ties). Have a look at what we imported.
+
+    ```{r}
+    #| label: demo-names-rank
+    names(df.rank)
+    ```
+
+    Each year's ranking is its own column and the names are numbers, so they need backticks too: `` `2023` ``. We need the IPEDS id, to match to `df`, and the 2023 rank. The file has the top 150, and some of those schools weren't ranked in 2023, so they have missing values that we should drop. Then rename to match `df`.
+
+    Now the join, and here's the twist. Up to now, we did *not* want to lose rows. This time we do – restricting to the ranked schools is itself a cleaning step, since it removes data. `inner_join()` is the obvious tool for that, but it has a real downside: any ranked school that *doesn't* find a match in `df` just vanishes, silently, with no trace. `right_join(df, df.rank)` gets you the same restriction – it keeps every row of `df.rank`, matched against whatever `df` has – but an unmatched row shows up instead of disappearing, filled with `NA` in every `df` column. That's a school you can actually go look at, rather than a school you never knew was missing.
+
+    ::: {.callout-tip title="Coding Practices: Which Join?"}
+    - `left_join(x, y)` keeps every row of `x`. Rows of `x` with no match get `NA`.
+    - `inner_join(x, y)` keeps only the rows with a match in both.
+    - `right_join(x, y)` keeps every row of `y`.
+    - `full_join(x, y)` keeps everything.
+
+    ![Which rows survive each join type, matching `df.adm` and `df.hd` on UNITID and year](images/join-types.png)
+
+    Default to `left_join()` from the dataframe that defines your sample. When you need to restrict to only the rows that match a second dataframe, prefer `right_join()` over `inner_join()` – it narrows the sample the same way, but a row that fails to match shows up as `NA` instead of disappearing without a trace.
+    :::
+
+2.  **Top 100.** Keep `rank2023` of 100 or less. That's 104 schools because of ties.
+
+3.  **2018 to 2022.** Our *ADM* folder only has those years, so this drops nothing today. Keep it anyway. When you extend the data – and you will – the replication stays on the paper's window unless you change it on purpose. Store the years in a variable, `wyrs`, and use `%in%` to keep the rows whose `year` is in it.
+
+4.  **Complete data.** The event study compares each school to itself over time, so we want schools that are observed in all five years with a non-missing outcome. This is called a *balanced panel*.
+
+The fourth one needs a new idea. `group_by(UNITID)` tells R to treat each school's rows as a group. A `filter()` on a grouped dataframe evaluates its conditions *within each group*, so `n_distinct(year) == length(wyrs)` asks "does this school have all five years?" and `all(!is.na(wshare))` asks "is the outcome never missing for this school?" Both are one `TRUE`/`FALSE` per school, so whole schools are kept or dropped. Then `ungroup()`.
+
+::: {.callout-tip title="Coding Practices: Always ungroup()"}
+A grouped dataframe stays grouped. Every `mutate()`, `summarize()`, and `filter()` after that will operate group-by-group, whether you meant it or not. Call `ungroup()` as soon as you're done with the groups.
+:::
+
+```{r}
+#| label: silent-reset-clean
+#| include: false
+df.rank <- .raw$rank; df.adm <- .raw$adm; df.hd <- .raw$hd; df.policy <- .raw$policy
+```
+
+```{r}
+#| label: workflow-clean
+#COMBINE DATA
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+#==== MAKE VARIABLES ====
+#outcome: women's share of applicants----
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM))
+
+#policy: repeal indicator from Table 1----
+#note: df.policy is only ever read here, never reassigned, so it's
+#still available afterward with every original column, In Sample included
+df <- df.policy |>
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned", 1, 0)) |>
+  right_join(df, join_by(Abbreviation == STABBR))
+
+#==== ADD RANKINGS ====
+#keep the 2023 ranking and rename to match df
+df.rank <- df.rank |>
+  select(UNITID = IPEDS, rank2023 = `2023`) |>
+  filter(!is.na(rank2023))
+
+#right join on purpose: keep only ranked schools, but surface any that don't match
+df <- df |> right_join(df.rank, join_by(UNITID))
+
+#==== CLEAN DATA ====
+#top 100 (104 because of ties)
+df <- df |> filter(rank2023 <= 100)
+
+#years in the paper
+wyrs <- 2018:2022
+df <- df |> filter(year %in% wyrs)
+
+#balanced panel: all years present and the outcome never missing
+df <- df |> group_by(UNITID) |>
+  filter(n_distinct(year) == length(wyrs), all(!is.na(wshare))) |>
+  ungroup()
+```
+
+Now compare to the paper. @walker2023anticipatory have 71 schools (19 in repeal states and 52 in control states) across 27 states (8 repeal and 19 control). We have
+
+```{r}
+#| label: demo-count-schools
+df |> distinct(UNITID, repeal) |> count(repeal, name = "schools")
+```
+
+```{r}
+#| label: demo-count-states
+df |> distinct(STABBR, repeal) |> count(repeal, name = "states")
+```
+
+That's `r df |> distinct(UNITID) |> nrow()` schools in `r df |> distinct(STABBR) |> nrow()` states. More than the paper, and that's expected – IPEDS covers every one of the ranked schools, while the paper was limited to the schools that publish a Common Data Set. If you want to see exactly which extra states are driving that, `df.policy`'s *In Sample* column – untouched this whole time, since we only ever read from `df.policy` and never reassigned it – tells you which states were in the paper's sample and which weren't. That's a join you can do on your own whenever you want it; nothing about the workflow above depends on it.
+
+::: {.callout-tip title="Coding Practices: Compare to the Paper"}
+Every time you restrict the sample, count what's left and compare to the paper. Differences you can explain are fine – write the explanation down. Differences you can't explain are a red flag.
+:::
+
+And, as always, skim the important variables before moving on.
+
+```{r}
+#| label: demo-skim-final
+df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
+```
+
+`wshare` is between 0 and 1 and never missing, `repeal` is 0 or 1, and `rank2023` runs from 1 to `r max(df$rank2023)` – ties are why "top 100" means 104 schools. This is the paper's sample.
+
+## Save the Dataframe
+
+::: {.callout-note appearance="minimal"}
+## Coding Learning Objectives
+
+- `save()` and `load()`
+- `rm()`
+:::
+
+The last step is to save `df` so the analysis scripts can just load it. `save()` writes R objects to a file. Use the `.Rdata` extension, which is R's own format – it keeps the variable types (no more text years) and it can hold more than one object. Save it to `data/saved data` with `here()`. Then tidy up the environment by removing the pieces we no longer need with `rm()`.
+
+The finished script looks like this.
+
+```{r}
+#| label: workflow-save
+#| eval: false
+#COMBINE DATA
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
+
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
+
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
+
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
+
+#==== MAKE VARIABLES ====
+#outcome: women's share of applicants----
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM))
+
+#policy: repeal indicator from Table 1----
+#note: df.policy is only ever read here, never reassigned, so it's
+#still available afterward with every original column, In Sample included
+df <- df.policy |>
+  select(Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned", 1, 0)) |>
+  right_join(df, join_by(Abbreviation == STABBR))
+
+#==== ADD RANKINGS ====
+#keep the 2023 ranking and rename to match df
+df.rank <- df.rank |>
+  select(UNITID = IPEDS, rank2023 = `2023`) |>
+  filter(!is.na(rank2023))
+
+#right join on purpose: keep only ranked schools, but surface any that don't match
+df <- df |> right_join(df.rank, join_by(UNITID))
+
+#==== CLEAN DATA ====
+#top 100 (104 because of ties)
+df <- df |> filter(rank2023 <= 100)
+
+#years in the paper
+wyrs <- 2018:2022
+df <- df |> filter(year %in% wyrs)
+
+#balanced panel: all years present and the outcome never missing
+df <- df |> group_by(UNITID) |>
+  filter(n_distinct(year) == length(wyrs), all(!is.na(wshare))) |>
+  ungroup()
+
+#==== SAVE ====
+save(df, file = here("data","saved data","maindf.Rdata"))
+
+#clean up
+rm(df.rank, df.adm, df.hd, df.policy, wyrs)
+```
+
+Save the script as *combine data.R* in `scripts/data processing`. This is a good time to commit: "add combine data script".
+
+To see the payoff, clear your environment and load the file back in. `load()` restores the object with the name it had when it was saved, so `df` reappears.
+
+```{r}
+#| label: demo-load
+#| eval: false
+rm(list = ls())
+load(here("data","saved data","maindf.Rdata"))
+```
+
+One warning about `load()`: if you already have a `df` in your environment, it gets overwritten without asking. That's fine at the top of an analysis script – it's what you want – but it can surprise you in the console.
+
+## Run All
+
+::: {.callout-note appearance="minimal"}
+## Coding Learning Objectives
+
+- `require()`
+- `source()`, again
+:::
+
+We now have two scripts that have to run in order, and there will be more. Recall the folder structure from @sec-introduction-r had a *Run All* script at the top of `scripts`. This is where it earns its keep. Make a new script, *Run All.R*, and save it directly in `scripts` (not in a sub-folder).
+
+```{r}
+#| label: workflow-runall
+#| eval: false
+#RUN ALL
+#runs the entire project from original data to results
+
+#===== LOAD PACKAGES =====
+#install pacman if needed, then use it to load here()
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(here)
+
+#===== DATA PROCESSING =====
+source(here("scripts","data processing","import data.R"))
+source(here("scripts","data processing","combine data.R"))
+
+#===== ANALYSIS =====
+#coming soon
+```
+
+The first section is a little different than usual. `require()` is like `library()` but it returns `TRUE` or `FALSE` instead of throwing an error, so `if (!require("pacman"))` reads as "if pacman isn't available, install it." After that, `pacman::p_load(here)` gives us `here()`, which is all *Run All.R* needs – each script loads its own packages.
+
+The rest is just `source()`, in order. Try it: clear your environment (`rm(list = ls())`, or the broom in the Environment pane), open *Run All.R*, and click **Source**. If it runs without error, you have a project that goes from original data to a saved, analysis-ready dataframe with one click. If it doesn't, you've found a bug that was hiding in your environment – something you created in the console and forgot to put in a script. That's the point.

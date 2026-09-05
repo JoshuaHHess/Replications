@@ -145,7 +145,6 @@ Download the following, each into its own folder:
 
 
 We'll also need **U.S. News & World Report college rankings**. Fortunately, there's a GitHub repo for that: <https://andyreiter.com/wp-content/uploads/2025/09/US-News-National-University-Rankings-Top-150-Through-2026.xlsx>. You should be able to download an excel (.xlsx) file. You may want to note the day you downloaded it for citation purposes.
->>>>>>> 3fbb42d0ecaf55d115a593af27b5acc33c2b0a66
 
 Now we need **State abortion-ban status**. The easiest way to construct this to drop the @walker2023anticipatory pdf into AI and ask it to generate an excel file of Table 1. Make sure to insist there's a state abbreviation column and a column indicating if the state is "in sample".
 
