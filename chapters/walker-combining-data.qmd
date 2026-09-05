@@ -1,4 +1,4 @@
-# Generate Variables {#sec-walker-combining-data}
+# Generate Variables {#sec-walker-make-variables}
 
 ```{r}
 #| label: silent-setup
@@ -25,9 +25,7 @@ Restricting that dataframe to the paper's sample – cleaning – is its own job
 
 ## Recall the Dataframes
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `source()`
 :::
 
@@ -35,9 +33,7 @@ Empirical projects can get overwhelming. There is simply *so much* to do. One wa
 
 Now, we need those four dataframes in our *Environment* (upper right of Rstudio) in order to combine them. Let's assume you've taken a (well-deserved) break after generating *import data.R*, closed down R, and have just re-opened it. You can get the dataframes back into your *Environment* by opening *import data.R* and running the script with Code –\> Run Region –\> Run All. Intuitively, you are going to the script that is the origin, or source, of the dataframes. Fortunately, R provides a way to automate that -- `source()` -- which takes a file path as an argument and executes the file verbatim.
 
-::: callout-tip
-## Coding Practices: `source()`
-
+::: {.callout-tip title="Coding Practices: `source()`"}
 Keep scripts as separate files whose name (or path) indicates what they do. Call the scripts with `source()`.
 :::
 
@@ -48,14 +44,12 @@ Let's start our script!
 #| eval: false
 
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 ```
 
 ## Combine the IPEDS Dataframes
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `left_join()` and `join_by()`
 - `as.numeric()` and variable types
 :::
@@ -126,7 +120,7 @@ df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 #| label: workflow-combine
 #| eval: false
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
 #keep the directory variables we need
@@ -180,7 +174,7 @@ df <- df |> mutate(year = as.numeric(year))
 #| label: workflow-year
 #| eval: false
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
 #keep the directory variables we need
@@ -201,9 +195,7 @@ class(df$year)
 
 ## Outcome and Policy Variables
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - renaming inside `select()`: `select(new = old)`
 - `if_else()`
 - `right_join()`
@@ -234,7 +226,7 @@ Let's add the outcome variable to our workflow.
 #| label: workflow-outcome
 #| eval: false
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
 #keep the directory variables we need
@@ -335,7 +327,7 @@ Default to `left_join()` from the dataframe that defines your sample. `right_joi
 #| label: workflow-right-join
 #| eval: false
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
 #keep the directory variables we need
@@ -397,7 +389,7 @@ Add this to the workflow. Make sure to check your rows!
 #| label: workflow-variables
 #| eval: false
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
 #keep the directory variables we need
@@ -438,9 +430,7 @@ They'll drop out on their own in the next chapter, when we restrict to ranked sc
 
 ## Heterogeneous Variables
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - long vs. wide formats
 - `pivot_longer()`
 - `distinct()`
@@ -550,9 +540,10 @@ df |> select(UNITID,rank2023) |> datasummary_skim()
 
 It turns out there are a lot of missing ranks. Well, that is to be expected since IPEDS has every school and USNWR only has the top 150.
 
-Since `df` has multiple occurences of the same UNITID, we observe multiple school-years, we'd like to know how many non-repeats we see of schools with a rank. That is the number of distinct schools that are not `NA` for *rank2023*.
+Since `df` has multiple rows per UNITID – one per school-year – the count we actually want is the number of *distinct* schools with a rank. That is the number of distinct UNITIDs that are not `NA` for *rank2023*.
 
 ```{r}
+#| label: demo-count-ranked
 df |> filter(!is.na(rank2023)) |> distinct(UNITID) |> nrow()
 ```
 
@@ -564,7 +555,7 @@ Our current workflow is then:
 #| label: workflow-hetero
 #| eval: false
 #===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whaterver you named your script
+source(here("scripts","data processing","import data.R")) #or whatever you named your script
 
 #==== COMBINE IPEDS DATA ====
 #keep the directory variables we need
@@ -587,9 +578,12 @@ df <-  df.policy |>
   right_join(df,join_by(STABBR))
 
 #==== HETEROGENEOUS VARIABLES ====
-#select 2023 rank and join 
-df <- df.rank |> select(UNITID=IPEDS,rank2023 = `2023`) |> 
+#select 2023 rank and join
+df <- df.rank |> select(UNITID=IPEDS,rank2023 = `2023`) |>
   right_join(df,join_by(UNITID))
 
 ```
 
+## What's Next
+
+`df` now has one row per school-year with the outcome (*wshare*), the policy (*repeal*), and the heterogeneity variable (*rank2023*) – everything the analysis needs. What it doesn't have yet is the paper's *sample*. It still has every school IPEDS knows about, including the unranked ones, the not-really-states, and the school-years with an undefined share. Restricting to the paper's sample is cleaning, and that's the next chapter.

@@ -35,9 +35,7 @@ Within sections, use (lots of) comments to explain the code in detail.
 
 ## Import US News & World Report Ranking
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `here()`
 - `pacman::p_load()`
 :::
@@ -129,9 +127,7 @@ You can examine the dataframe with `view(df.rank)` or by clicking on it in the D
 
 ## Import Application Data
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - pipe operator: `|>`
 - `mutate()`
 - `bind_rows()`
@@ -583,9 +579,7 @@ for (ll in 2:length(lf)){
 
 ## Check Application Data Import
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `select()`
 - `datasummary_skim()`
 :::
@@ -615,9 +609,7 @@ Nothing in this screams red flag, so we can proceed.
 
 ## Import Directory Data
 
-::: {.callout-note appearance="minimal"}
-## Coding Learning Objectives
-
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `filter()`
 - `!`
 :::
