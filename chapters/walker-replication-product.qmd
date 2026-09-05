@@ -1,8 +1,48 @@
 # Replication Product Example {#sec-walker-replication-product}
 
-Once you've worked through importing, processing, and (eventually) analyzing the Walker et al. (2023) data, your final product should look something like the deck below. It's a full worked example: the motivation, the data, the econometric approach, the results (including a side-by-side comparison against Walker et al.'s own numbers), limitations, future directions, and the actual code that produced it.
+Your finished product should address the four questions of scientific inquiry:
 
-This isn't a template to copy line-for-line — your own replication will differ in the details — but it's meant to give you a concrete sense of what "finished" looks like.
+1.  Why did we do this?
+
+2.  How did we do this?
+
+3.  What did we find?
+
+4.  What does it mean?
+
+### Why did we do this?
+
+This is generally answered in the *Introduction*/*Literature* section. Here, the answer is straightforward. We are replicating an existing paper with a slightly different data set. If the results hold, we improve our confidence in the original findings. If not, well....
+
+### How did we do this?
+
+This should provide a recipe or roadmap for others to follow (like you did!). Describe how you collected your data and how you analyzed it.
+
+### What did we find?
+
+Address this in your *Results* section. Present your replications of the five main event studies in @walker2023anticipatory: Figure 1, Figure A1, Figure A2, Figure A3, Figure A4.
+
+### What does it mean?
+
+Address this in a *Conclusion* or *Discussion* section. Interpret your findings and provide context. How do your findings address the research question? Is it unequivocally answered or should your results be interpreted with caution? Does it have implications for future research?
+
+### Examples
+
+You can make a very nice product using Rstudio, though for this purpose there are more sophisticated tools that are potentially less frustrating.
+
+[Quarto presentations](https://quarto.org/docs/presentations/) (File –\> New File –\> Quarto presentation) take some getting used to, but ultimately save time since all your work is in one place.
+
+Again, an AI agent can be **a lot** of help here.
+
+Here is a beamer presentation:
+
+```{=html}
+<iframe src="../slides/replication-presentation.pdf" width="100%" height="600" style="border:1px solid #ccc;"></iframe>
+```
+
+If the embedded PDF above doesn't render (this depends on your browser, and often fails on phones/tablets), you can [open the PDF in a new tab](../slides/replication-presentation.pdf) instead.
+
+Here is a revealjs presentation.
 
 ```{=html}
 <iframe src="../slides/replication-presentation-revealjs.html" width="100%" height="600" style="border:1px solid #ccc;"></iframe>
