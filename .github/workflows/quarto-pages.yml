@@ -19,7 +19,7 @@ jobs:
       - uses: quarto-dev/quarto-actions/setup@v2
       - name: Install R packages
         run: |
-          Rscript -e 'install.packages(c("readr","dplyr","tidyr","stringr","ggplot2","fixest","broom","rvest","xml2","purrr","scales"), repos = "https://cloud.r-project.org")'
+          Rscript -e 'install.packages(c("rmarkdown","knitr","readr","dplyr","tidyr","stringr","ggplot2","fixest","broom","rvest","xml2","purrr","scales","here","readxl","modelsummary","pacman"), repos = "https://cloud.r-project.org")'
       - name: Render book
         run: quarto render
       - uses: actions/upload-pages-artifact@v3
