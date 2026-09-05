@@ -1,4 +1,4 @@
-# Combining Data {#sec-walker-combining-data}
+# Generate Variables {#sec-walker-combining-data}
 
 ```{r}
 #| label: silent-setup
@@ -11,9 +11,17 @@ rm(data.path)
 
 ```
 
-At the end of @sec-walker-data-importing we had four dataframes: `df.adm` (applications), `df.hd` (directory information), `df.rank` (rankings), and `df.policy` (state policy). What we want is *one* dataframe with one row per school per year that has the outcome, the policy indicator, and the ranking, restricted to the sample in @walker2023anticipatory, and saved in `data/saved data` so the analysis scripts can load it and get to work.
+At the end of @sec-walker-data-importing we had four dataframes: `df.adm` (applications), `df.hd` (directory information), `df.rank` (rankings), and `df.policy` (state policy).
 
-That's the remaining three steps – combine the data, make the variables, clean the data – plus saving. This gets its own script. Make a new R script in `scripts/data processing` and call it *combine data.R*.
+Ultimately, we want *one* dataframe, with one row per school per year, that has:
+
+- the policy variable we wish to study
+
+- the outcome variable that we'll use to measure the policy impact
+
+- and variables that will be used to show how the outcomes might differ by group – heterogeneous impacts.
+
+Restricting that dataframe to the paper's sample – cleaning – is its own job, and gets its own chapter. This chapter just builds the variables. This gets its own script. Make a new R script in `scripts/data processing` and call it *make variables.R*.
 
 ## Recall the Dataframes
 
@@ -48,7 +56,6 @@ source(here("scripts","data processing","import data.R")) #or whaterver you name
 ::: {.callout-note appearance="minimal"}
 ## Coding Learning Objectives
 
-- `select()`
 - `left_join()` and `join_by()`
 - `as.numeric()` and variable types
 :::
@@ -192,14 +199,16 @@ df <- df |> mutate(year = as.numeric(year))
 class(df$year)
 ```
 
-## Make Variables
+## Outcome and Policy Variables
 
 ::: {.callout-note appearance="minimal"}
 ## Coding Learning Objectives
 
-- `mutate()`
+- renaming inside `select()`: `select(new = old)`
 - `if_else()`
-- `right_join()` and `join_by()` with `==`
+- `right_join()`
+- `join_by(x == y)` for keys with different names
+- `count()`
 :::
 
 In this section we generate the two main variables of interest. Generally, we want to study the impact of a policy on some outcome. In this context, the impact of *bans* on the *share of women applicants*.
@@ -217,7 +226,7 @@ Why not divide by the total number of applicants, APPLCN? Because IPEDS allows s
 df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM)) |> select(wshare) |> datasummary_skim()
 ```
 
-A share should live between 0 and 1, and it does. The mean is a bit above one half, which is what we expect – women have been the majority of college applicants for a while. Some school-years are missing because a school reported zero (or nothing) for both, which makes the share undefined. We'll deal with those when we clean.
+A share should live between 0 and 1, and it does. The mean is a bit above one half, which is what we expect – women have been the majority of college applicants for a while. Some school-years are missing because a school reported zero (or nothing) for both, which makes the share undefined. We'll deal with those in the next chapter, when we clean the data.
 
 Let's add the outcome variable to our workflow.
 
@@ -250,7 +259,7 @@ The policy variable comes from Table 1 in @walker2023anticipatory, which we (or 
 names(df.policy)
 ```
 
-Most *tidyverse* functions can handle a column name without quotations. That is `select(UNITID)` knows you are referring to a column name. However, this doesn't work if the names are numbers or has spaces. Then, you'll have to wrap the name in backticks – `` `Abortion Status` or `2021` ``– when you reference it. In @sec-walker-combining-data, we briefly discussed `select()`. Now we'll use it again with an additional functionality. Not only does `select()` keep the specified column in the specified order, you can rename them with `new = old,` as well!
+Most *tidyverse* functions can handle a column name without quotations. That is `select(UNITID)` knows you are referring to a column name. However, this doesn't work if the names are numbers or have spaces. Then, you'll have to wrap the name in backticks – `` `Abortion Status` or `2021` ``– when you reference it. In @sec-walker-data-importing, we introduced `select()`. Now we'll use it again with an additional functionality. Not only does `select()` keep the specified column in the specified order, you can rename them with `new = old,` as well!
 
 ```{r}
 #| label: demo-select-with-namechange
@@ -282,7 +291,7 @@ df.policy |>
   mutate(repeal = if_else(status == "Banned",1,0))
 ```
 
-Notice that we make changes to `df.policy` without assigning the changes/saving them. This means the `df.policy` dataframe in the *Environment* is the same as when it was when it was created. This is nice because it allows is to add the variable *repeal to* `df` without changing `df.policy`. Let's try to keep it this way.
+Notice that we make changes to `df.policy` without assigning the changes/saving them. This means the `df.policy` dataframe in the *Environment* is the same as when it was created. This is nice because it allows us to add the variable *repeal* to `df` without changing `df.policy`. Let's try to keep it this way.
 
 There are two ways we could perform the `join` that will bring in *repeal* to `df`. Using the `left_join()` entails operating on `df.policy` within the `join` like this
 
@@ -309,7 +318,18 @@ df <-  df.policy |>
   right_join(df)
 ```
 
-The resulting dataframes should contain the same columns (though they'll have different orders since `join` try to preserve order) and the same rows. I will use the `right_join()` since it seems more readable to me.
+The resulting dataframes should contain the same columns (though they'll have different orders since joins try to preserve the order of the dataframe on the left) and the same rows. I will use the `right_join()` since it seems more readable to me.
+
+::: {.callout-tip title="Coding Practices: Which Join?"}
+- `left_join(x, y)` keeps every row of `x`. Rows of `x` with no match get `NA`.
+- `right_join(x, y)` keeps every row of `y`. Same idea, dataframes swapped.
+- `inner_join(x, y)` keeps only the rows with a match in both.
+- `full_join(x, y)` keeps everything.
+
+![Which rows survive each join type, matching `df.adm` and `df.hd` on UNITID and year](images/join-types.png)
+
+Default to `left_join()` from the dataframe that defines your sample. `right_join()` gives the same result with the arguments flipped – handy when the dataframe you're *adding* is the one coming down the pipe, as `df.policy` is here. `inner_join()` and `full_join()` change which rows survive, so use them on purpose and say so in a comment.
+:::
 
 ```{r}
 #| label: workflow-right-join
@@ -414,25 +434,27 @@ There are `r df |> filter(is.na(repeal)) |> nrow()` school-years with no policy.
 df |> filter(is.na(repeal)) |> distinct(STABBR) |> pull(STABBR)
 ```
 
-They'll drop out on their own when we restrict to ranked schools. If they didn't, we'd have to decide what to do with them.
+They'll drop out on their own in the next chapter, when we restrict to ranked schools. If they didn't, we'd have to decide what to do with them.
 
 ## Heterogeneous Variables
-
-Policies will have different impacts across groups. This is often called heterogeneous impacts. For example, this ban might affect community colleges differently than public universities. In fact, @walker2023anticipatory operationalize this with a single variable, the U.S. News & World Report Rankings. But, other variables, like the amount of online students or whether a school is public or private might also show heterogeneous impacts. It's generally good to keep the outcome, policy, and heterogeneous variables in places where you can readily find them. You might later want to look at a different outcome, slightly different policy, our heterogeneous effects. Actually, @walker2023anticipatory does all of these. They examine the impact of bans on a different outcome – total applications (Figure A5), policy (dropping states that blocked bans) \[Figure A7\], and heterogeneity by ranking \[Figures A1 and A3\] and out-of-state applications \[Figures A2 and A4\]. All of these investigations are central to understanding *how* the policy affects applications.
-
-We have the ranking dataframe, which we will join shortly.
-
-However, IPED's EF-C survey tells the number of freshmen by home state at a school. You should use this data to generate a variable representing out-of-state freshmen enrollment as a proxy for applications[^walker-combining-data-1] and replicate the heterogeneity analysis noted above in @walker2023anticipatory.
-
-[^walker-combining-data-1]: It is hard to tell from the paper, but there is a chance @walker2023anticipatory did this, too.
-
-## Ranking Data
 
 ::: {.callout-note appearance="minimal"}
 ## Coding Learning Objectives
 
 - long vs. wide formats
+- `pivot_longer()`
+- `distinct()`
 :::
+
+Policies will have different impacts across groups. This is often called heterogeneous impacts. For example, this ban might affect community colleges differently than public universities. In fact, @walker2023anticipatory operationalize this with a single variable, the U.S. News & World Report Rankings. But, other variables, like the amount of online students or whether a school is public or private might also show heterogeneous impacts. It's generally good to keep the outcome, policy, and heterogeneous variables in places where you can readily find them. You might later want to look at a different outcome, slightly different policy, or heterogeneous effects. Actually, @walker2023anticipatory does all of these. They examine the impact of bans on a different outcome – total applications (Figure A5), policy (dropping states that blocked bans) \[Figure A7\], and heterogeneity by ranking \[Figures A1 and A3\] and out-of-state applications \[Figures A2 and A4\]. All of these investigations are central to understanding *how* the policy affects applications.
+
+We have the ranking dataframe, which we will join shortly.
+
+However, the IPEDS EF-C survey tells the number of freshmen by home state at a school. You should use this data to generate a variable representing out-of-state freshmen enrollment as a proxy for applications[^walker-combining-data-1] and replicate the heterogeneity analysis noted above in @walker2023anticipatory.
+
+[^walker-combining-data-1]: It is hard to tell from the paper, but there is a chance @walker2023anticipatory did this, too.
+
+### Ranking Data
 
 Let's start by having a look at what we imported.
 
@@ -482,11 +504,9 @@ The two dataframes give different numbers of rows! That's because `df.rank` has 
 
 Importantly, most computational regression functions want long format dataframes.
 
-
 To put `df.rank` into a long format, we use another *tidyverse* function, `pivot_longer()`. We tell it to take the year columns (currently named 2026, 2025, etc.) and place the names into a single variable called *year*. Also, the values in those columns -- which are the ranks in that year -- should go into a column called *rank*.
 
 ![`pivot_longer()` stacks each year's column into a `year` column and a `rank` column, turning one row per school into one row per school-year](images/pivot-long-wide.png)
-
 
 ```{r}
 #| label: demo-pivot-rank-long
@@ -498,17 +518,17 @@ df.rank.long <- df.rank |>
     values_to = "rank")
 ```
 
-From here, we could join this with `df` preserving the rows in `df`, provided we format the *year* variable in df.rank.long to be a numeric
+From here, we could join this with `df`, preserving the rows in `df`, provided we make the *year* variable in `df.rank.long` numeric first (the same text-vs-number problem from earlier – column names are always text).
 
 ```{r}
 #| label: demo-long-join
 #| eval: false
-df <- df |> 
+df <- df |>
   left_join(
-    #format df.rank.long to have numerical year and UNITD cols
+    #format df.rank.long to have numerical year and UNITID cols
     df.rank.long |> mutate(year = as.numeric(year),UNITID = IPEDS),
     join_by(UNITID,year)
-  ) 
+  )
 ```
 
 But, since all we want is the 2023 rank, it is overkill.
@@ -528,10 +548,9 @@ We can check the result.
 df |> select(UNITID,rank2023) |> datasummary_skim()
 ```
 
-It turns out there are a lot of missing ranks. Well, that is to be expected since IPEDS has every school and USNWR only has the top 150. 
+It turns out there are a lot of missing ranks. Well, that is to be expected since IPEDS has every school and USNWR only has the top 150.
 
-Since `df` has multiple occurences of the same UNITID, we observe multiple school-years, we'd like to know how many non-repeats we see of schools with a rank. That is the number of distinct schools that are not `NA` for *rank2023*. 
-
+Since `df` has multiple occurences of the same UNITID, we observe multiple school-years, we'd like to know how many non-repeats we see of schools with a rank. That is the number of distinct schools that are not `NA` for *rank2023*.
 
 ```{r}
 df |> filter(!is.na(rank2023)) |> distinct(UNITID) |> nrow()
@@ -539,17 +558,38 @@ df |> filter(!is.na(rank2023)) |> distinct(UNITID) |> nrow()
 
 Perfect!
 
+Our current workflow is then:
 
-##### CURRENT BOTTOM
+```{r}
+#| label: workflow-hetero
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","import data.R")) #or whaterver you named your script
 
+#==== COMBINE IPEDS DATA ====
+#keep the directory variables we need
+df.hd <- df.hd |> select(UNITID, year, INSTNM, STABBR, FIPS, CONTROL, INSTCAT)
 
-::: {.callout-tip title="Coding Practices: Which Join?"}
-- `left_join(x, y)` keeps every row of `x`. Rows of `x` with no match get `NA`.
-- `inner_join(x, y)` keeps only the rows with a match in both.
-- `right_join(x, y)` keeps every row of `y`.
-- `full_join(x, y)` keeps everything.
+#add directory information to the applications data
+df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 
-![Which rows survive each join type, matching `df.adm` and `df.hd` on UNITID and year](images/join-types.png)
+#year was extracted from the file name as text; make it a number
+df <- df |> mutate(year = as.numeric(year))
 
-Default to `left_join()` from the dataframe that defines your sample. When you need to restrict to only the rows that match a second dataframe, prefer `right_join()` over `inner_join()` – it narrows the sample the same way, but a row that fails to match shows up as `NA` instead of disappearing without a trace.
-:::
+#==== OUTCOME VARIABLE ====
+df <- df |> mutate(wshare = APPLCNW/(APPLCNW + APPLCNM) )
+
+#==== POLICY VARIABLE ====
+#generate repeal indicator and join it
+df <-  df.policy |>
+  select(STABBR = Abbreviation, status = `Abortion Status`) |>
+  mutate(repeal = if_else(status == "Banned",1,0)) |>
+  right_join(df,join_by(STABBR))
+
+#==== HETEROGENEOUS VARIABLES ====
+#select 2023 rank and join 
+df <- df.rank |> select(UNITID=IPEDS,rank2023 = `2023`) |> 
+  right_join(df,join_by(UNITID))
+
+```
+
