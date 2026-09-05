@@ -1,4 +1,4 @@
-# Data Processing {#sec-walker-data-importing}
+# Data Processing: Import Data {#sec-walker-data-importing}
 
 ```{r}
 #| label: silent-packages
