@@ -48,6 +48,10 @@ The current structure is
 
 3.  @sec-walker-data-importing walks through importing the data and the associated coding tools
 
-4.  Combining Data (in progress, not yet in the book) will show how to merge the data, create variable (outcome and policy), and save it
+4.  @sec-walker-make-variables shows how to make the policy, outcome, and heterogeneous variables — not controls in this replication
 
-5.  Analysis (in progress, not yet in the book) will work through the analysis and generation of results
+5.  Cleaning, Final Dataframe, and Run All discusses matching the data to @walker2023anticipatory's sample, saving the dataframe, and making a Run All script to organize the files.
+
+6.  Analysis (in progress, not yet in the book) will work through the analysis and generation of results
+
+7.  @sec-walker-replication-product talks about the final product and gives some examples
