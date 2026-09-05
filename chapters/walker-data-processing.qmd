@@ -133,6 +133,7 @@ You can examine the dataframe with `view(df.rank)` or by clicking on it in the D
 ## Coding Learning Objectives
 
 - pipe operator: `|>`
+- `mutate()`
 - `bind_rows()`
 - `for` loop construction
 :::
@@ -233,7 +234,11 @@ The shortcuts are:
 - **Mac:** `Cmd` + `Shift` + `M`
 :::
 
-Returning to the variables in the data, we have UNITID, APPLCNM, APPLCNW, but we don't have the year. We need to make a new variable that has the year. You can do that with the `mutate()` function from the *tidyverse* package.
+Returning to the variables in the data, we have UNITID, APPLCNM, APPLCNW, but we don't have the year. We need to make a new variable that has the year. More basically, we need to make a new variable from existing variables, which is to say **mutate** it from existing variables. You can do that with the `mutate()` function from the *tidyverse* package.
+
+::: {.callout-tip title="Coding Practices: `mutate()`"}
+mutate() creates a new variable by applying functions existing variables.
+:::
 
 ```{r}
 #| label: workflow-year
@@ -581,12 +586,15 @@ for (ll in 2:length(lf)){
 ::: {.callout-note appearance="minimal"}
 ## Coding Learning Objectives
 
+- `select()`
 - `datasummary_skim()`
 :::
 
 We seem to have successfully imported the applications data! More importantly, we have a ready made workflow that can be re-used for the directory data. However, were there to be an error in the initial workflow that was unnoticed, we would compound the mistake by blithely re-using it. It is, in fact, quite rare for a first pass to be mistake free so the wise coder pauses frequently to check imported data. Very frequently. There are a variety of checks that can (and should) be implemented, but the easiest one is in the *modelsummary* package.
 
 So, load the package with `library(modelsummary)` (you may need to install it first with `install.packages("modelsummary")`). Then, use datasummary_skim(df) to examine your dataframe. That does turn out to be A LOT. So, let's focus on the variables of interest instead. That is, we'd like to select just a few columns from the dataframe to be "skimmed".
+
+Quickly, `select()` is a *tidyverse* function that keeps only the listed columns from a dataframe and keeps them in the order they appear inside of `select()`. So, if a `df` has columns *a, b, c, ..., x, y, z*, `df |> select(z,x,y)` keeps only the last three columns and puts *z* first. For funsies, you could also do `df |> select(x,y,z) |> relocate(z)`.
 
 ```{r}
 #| label: demo-datasummary_skim
