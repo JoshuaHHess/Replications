@@ -1,4 +1,4 @@
-# Generate Variables {#sec-walker-make-variables}
+# Data Processing: Generate Variables {#sec-walker-make-variables}
 
 ```{r}
 #| label: silent-setup
