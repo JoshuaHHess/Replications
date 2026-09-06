@@ -4,6 +4,9 @@
 #| label: silent-setup
 #| include: false
 
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+library(here)
+library(modelsummary)
 rm(list = ls())
 source(here("scripts","data processing","import data.R"))
 rm(data.path)
