@@ -13,7 +13,9 @@ source(here("scripts","data processing","make variables.R"))
 
 At the end of @sec-walker-make-variables, `df` had one row per school-year with the policy (*repeal*), the outcome (*wshare*), and the heterogeneity variable (*rank2023*). It also had every school IPEDS knows about. The last data processing job is to restrict `df` to the sample in @walker2023anticipatory – *cleaning* – and then save the result so the analysis can pick it up without re-running any of this.
 
-A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. Real datasets come with missing values that mean three different things, duplicated rows, impossible values (negative enrollments, shares above one), and inconsistent codings that only reveal themselves halfway through the analysis. Ours is going to be short and painless – and that's not luck. It's one of the reasons this particular replication was chosen. IPEDS is a well-maintained federal census and the paper defines its sample with three crisp rules, so cleaning here is just filtering. Enjoy it while it lasts.
+A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. "Missing" alone can mean a dozen different things – never reported, reported as zero when it's really absent, suppressed for privacy, not applicable to that observation, lost in a bad merge – and each meaning calls for a different response. Variables from different sources have to be *harmonized* before they can even be compared: one file writes "AL", another "Alabama", a third "01", and all three mean the same state. And then come the judgment calls. Should an observation with a suspicious value be removed, or is it real? A school missing one year in the middle of the panel – can you interpolate it from its neighbors, or does that invent data? Every answer changes your sample, and your sample changes your results. There's a reason cleaning has a nightmare reputation.
+
+Ours is going to be short and painless – and that's not luck. It's one of the reasons this particular replication was chosen. IPEDS is a well-maintained federal census and the paper defines its sample with three crisp rules, so cleaning here is just filtering. Enjoy it while it lasts.
 
 Painless or not, cleaning gets its own script. Every `filter()` in it is a decision about who is in your sample, and those are exactly the decisions you (and anyone checking your work) will want to find, question, and change later. Keeping them in one small file with an honest name means nobody has to go hunting. Make a new R script in `scripts/data processing` and call it *clean data.R*. It starts the way the last one did – by sourcing its predecessor.
 
@@ -106,6 +108,47 @@ df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
 ```
 
 `wshare` is between 0 and 1 and never missing, `repeal` is 0 or 1, and `rank2023` runs from 1 to `r max(df$rank2023)` – tied schools share a rank value, which is why the ranks stop short of 100 even though the top-100 filter kept 104 schools. (The balanced panel then dropped `r 104 - (df |> distinct(UNITID) |> nrow())`, leaving `r df |> distinct(UNITID) |> nrow()`.) This is the paper's sample. Save the script as *clean data.R* in `scripts/data processing`.
+
+## Summary Statistics
+
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
+- `summarize()`
+- `pivot_wider()`
+:::
+
+You have the paper's sample. Before any model touches it, you should be able to describe it in plain numbers – how many schools of each type, what the outcome looks like in each group, how it moves over time. Summary statistics are how you build intuition for what the regression is about to formalize, and they're the first table in almost every paper for the same reason.
+
+The tool is `summarize()`. Like `mutate()`, it computes new variables from existing ones – but where `mutate()` adds a column and keeps every row, `summarize()` *collapses* the dataframe down to one row per group, keeping only what you computed. Pair it with `group_by()` and you get one row per group.
+
+::: {.callout-tip title="Coding Practices: summarize() vs mutate()"}
+Both compute new variables. `mutate()` keeps all your rows and adds a column; `summarize()` collapses each group to a single row. If your result should have as many rows as groups, you want `summarize()`.
+:::
+
+Start with one row per policy group.
+
+```{r}
+#| label: demo-summary-groups
+df |> group_by(repeal) |>
+  summarize(
+    schools = n_distinct(UNITID),
+    wshare_mean = mean(wshare),
+    wshare_sd = sd(wshare),
+    applicants = mean(APPLCN)
+  )
+```
+
+Read it like a referee would. Schools in repeal states have a somewhat *higher* female share on average and somewhat fewer applicants. That level difference is fine – the fixed effects will absorb it – but it's exactly the kind of thing you want to know about your sample before you interpret anything.
+
+The more interesting cut is by group *and* year, since the whole design turns on how the gap between the two groups moves over time. Computing it is a two-variable `group_by()`; the result, though, comes back long – one row per group-year – which is the right shape for computing and a clumsy shape for reading. `pivot_wider()` is `pivot_longer()`'s inverse: it spreads a variable's values out into column names, exactly the transformation we spent last chapter undoing.
+
+```{r}
+#| label: demo-summary-yearly
+df |> group_by(repeal, year) |>
+  summarize(wshare = round(mean(wshare), 3), .groups = "drop") |>
+  pivot_wider(names_from = year, values_from = wshare)
+```
+
+Now squint at the gap between the two rows, year by year. It sits steady at around 3.4 percentage points from 2018 through 2021 – and then narrows in 2022, the first application cycle after *Dobbs*. That's the paper's finding, visible in raw means before a single regression: a stable pre-period gap (the parallel-trends eyeball from @sec-walker-introduction) and a post-treatment dip. The event study will put a confidence interval on it; the raw table is why you'll believe the event study.
 
 ## Run All
 
