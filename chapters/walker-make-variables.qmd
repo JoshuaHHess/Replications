@@ -428,9 +428,9 @@ Policies will have different impacts across groups. This is often called heterog
 
 We have the ranking dataframe, which we will join shortly.
 
-However, the IPEDS EF-C survey tells the number of freshmen by home state at a school. You should use this data to generate a variable representing out-of-state freshmen enrollment as a proxy for applications[^walker-combining-data-1] and replicate the heterogeneity analysis noted above in @walker2023anticipatory.
+However, the IPEDS EF-C survey tells the number of freshmen by home state at a school. You should use this data to generate a variable representing out-of-state freshmen enrollment as a proxy for applications[^walker-make-variables-1] and replicate the heterogeneity analysis noted above in @walker2023anticipatory.
 
-[^walker-combining-data-1]: It is hard to tell from the paper, but there is a chance @walker2023anticipatory did this, too.
+[^walker-make-variables-1]: It is hard to tell from the paper, but there is a chance @walker2023anticipatory did this, too.
 
 ### Ranking Data
 
