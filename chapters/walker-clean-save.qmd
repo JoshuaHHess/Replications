@@ -1,0 +1,196 @@
+# Data Processing: Clean and Save {#sec-walker-clean-save}
+
+```{r}
+#| label: silent-setup
+#| include: false
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+library(here)
+library(modelsummary)
+rm(list = ls())
+source(here("scripts","data processing","make variables.R"))
+```
+
+At the end of @sec-walker-make-variables, `df` had one row per school-year with the policy (*repeal*), the outcome (*wshare*), and the heterogeneity variable (*rank2023*). It also had every school IPEDS knows about. The last data processing job is to restrict `df` to the sample in @walker2023anticipatory – *cleaning* – and then save the result so the analysis can pick it up without re-running any of this.
+
+A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. Real datasets come with missing values that mean three different things, duplicated rows, impossible values (negative enrollments, shares above one), and inconsistent codings that only reveal themselves halfway through the analysis. Ours is going to be short and painless – and that's not luck. It's one of the reasons this particular replication was chosen. IPEDS is a well-maintained federal census and the paper defines its sample with three crisp rules, so cleaning here is just filtering. Enjoy it while it lasts.
+
+Painless or not, cleaning gets its own script. Every `filter()` in it is a decision about who is in your sample, and those are exactly the decisions you (and anyone checking your work) will want to find, question, and change later. Keeping them in one small file with an honest name means nobody has to go hunting. Make a new R script in `scripts/data processing` and call it *clean data.R*. It starts the way the last one did – by sourcing its predecessor.
+
+```{r}
+#| label: demo-source
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","make variables.R"))
+```
+
+## Clean Data
+
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
+- `%in%`
+- `group_by()` and `ungroup()`
+- `n_distinct()` and `all()`
+:::
+
+Cleaning means restricting the sample to match the paper. There are three restrictions.
+
+1.  **Top 100.** Keep `rank2023` of 100 or less. That's 104 schools because of ties. This one filter does double duty: a school with no rank has `NA` for *rank2023*, and an `NA` fails the condition, so the unranked schools – territories included – drop out here too. That's the promise from last chapter kept.
+
+2.  **2018 to 2022.** Our *ADM* folder only has those years, so this drops nothing today. Keep it anyway. When you extend the data – and you will – the replication stays on the paper's window unless you change it on purpose. Store the years in a variable, `wyrs`, and use `%in%` to keep the rows whose `year` is in it.
+
+3.  **Complete data.** The event study compares each school to itself over time, so we want schools that are observed in all five years with a non-missing outcome. This is called a *balanced panel*. This is also where the school-years with an undefined *wshare* finally exit.
+
+The third one needs a new idea. `group_by(UNITID)` tells R to treat each school's rows as a group. A `filter()` on a grouped dataframe evaluates its conditions *within each group*, so `n_distinct(year) == length(wyrs)` asks "does this school have all five years?" and `all(!is.na(wshare))` asks "is the outcome never missing for this school?" Both are one `TRUE`/`FALSE` per school, so whole schools are kept or dropped. Then `ungroup()`.
+
+::: {.callout-tip title="Coding Practices: Always ungroup()"}
+A grouped dataframe stays grouped. Every `mutate()`, `summarize()`, and `filter()` after that will operate group-by-group, whether you meant it or not. Call `ungroup()` as soon as you're done with the groups.
+:::
+
+```{r}
+#| label: silent-clean
+#| include: false
+df <- df |> filter(rank2023 <= 100)
+wyrs <- 2018:2022
+df <- df |> filter(year %in% wyrs)
+df <- df |> group_by(UNITID) |>
+  filter(n_distinct(year) == length(wyrs), all(!is.na(wshare))) |>
+  ungroup()
+```
+
+The whole script:
+
+```{r}
+#| label: workflow-clean
+#| eval: false
+#===== LOAD DATAFRAMES =====
+source(here("scripts","data processing","make variables.R"))
+
+#==== CLEAN DATA ====
+#top 100 in 2023 (104 schools because of ties)
+#NA ranks fail the condition, so unranked schools drop out here too
+df <- df |> filter(rank2023 <= 100)
+
+#years in the paper
+wyrs <- 2018:2022
+df <- df |> filter(year %in% wyrs)
+
+#balanced panel: all years present and the outcome never missing
+df <- df |> group_by(UNITID) |>
+  filter(n_distinct(year) == length(wyrs), all(!is.na(wshare))) |>
+  ungroup()
+```
+
+Now compare to the paper. @walker2023anticipatory have 71 schools (19 in repeal states and 52 in control states) across 27 states (8 repeal and 19 control). We have
+
+```{r}
+#| label: demo-count-schools
+df |> distinct(UNITID, repeal) |> count(repeal, name = "schools")
+```
+
+```{r}
+#| label: demo-count-states
+df |> distinct(STABBR, repeal) |> count(repeal, name = "states")
+```
+
+That's `r df |> distinct(UNITID) |> nrow()` schools in `r df |> distinct(STABBR) |> nrow()` states. More than the paper, and that's expected – IPEDS covers every one of the ranked schools, while the paper was limited to the schools that publish a Common Data Set. If you want to see exactly which extra states are driving the difference, `df.policy`'s *In Sample* column – untouched this whole time – tells you which states were in the paper's sample.
+
+::: {.callout-tip title="Coding Practices: Compare to the Paper"}
+Every time you restrict the sample, count what's left and compare to the paper. Differences you can explain are fine – write the explanation down. Differences you can't explain are a red flag.
+:::
+
+And, as always, skim the important variables before moving on.
+
+```{r}
+#| label: demo-skim-final
+df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
+```
+
+`wshare` is between 0 and 1 and never missing, `repeal` is 0 or 1, and `rank2023` runs from 1 to `r max(df$rank2023)` – tied schools share a rank value, which is why the ranks stop short of 100 even though the top-100 filter kept 104 schools. (The balanced panel then dropped `r 104 - (df |> distinct(UNITID) |> nrow())`, leaving `r df |> distinct(UNITID) |> nrow()`.) This is the paper's sample. Save the script as *clean data.R* in `scripts/data processing`.
+
+## Run All
+
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
+- `require()`
+- a *Run All* script
+:::
+
+Step back and look at what you've built: three scripts, each doing one job, each starting by sourcing the one before it. *import data.R* reads the original files, *make variables.R* builds the variables, *clean data.R* restricts the sample. The chain means running the last script runs the whole pipeline.
+
+That knowledge currently lives only in your head. Someone opening this project cold – including future you – shouldn't have to reconstruct which script is the entry point. So we write it down as a script: *Run All.R*, saved at the top of `scripts/`. One file that runs the entire project from original data to final output.
+
+Before writing it, one housekeeping decision: where do packages load? Right now they load inside *import data.R*, which works but buries your dependencies in the middle of the chain. Better to make them explicit, in one of two places:
+
+- **Top of *Run All.R*.** Everything the project needs is the first thing anyone reads. Simple, and right for a project this size.
+
+- **A separate *setup.R*, sourced first.** Once the package list grows – modeling packages, table packages, conflict preferences – it starts to crowd *Run All.R*. Moving it to its own script keeps *Run All.R* readable as a table of contents, and other entry points (an analysis-only session, say) can source the same *setup.R* and get an identical environment.
+
+Either is fine; the point is that dependencies live somewhere explicit and load *first*, so a missing package fails loudly at the top instead of halfway through a forty-minute run. We'll use the first option here, and `pacman::p_load()` is harmless to call twice – it only installs what's missing – so the loads inside *import data.R* can stay.
+
+One wrinkle: `p_load()` is itself from a package. `require()` is like `library()` except it returns `FALSE` instead of an error when the package is missing, which makes it the standard bootstrap idiom: try to load pacman, install it if that fails, and from then on pacman handles everything else.
+
+```{r}
+#| label: workflow-runall
+#| eval: false
+#RUN ALL
+
+#===== LOAD PACKAGES =====
+if (!require("pacman")) {
+  install.packages("pacman")
+}
+pacman::p_load(readxl, here, tidyverse, modelsummary)
+
+#===== COMPILE DATA =====
+#clean data.R sources make variables.R, which sources import data.R
+source(here("scripts","data processing","clean data.R"))
+```
+
+Note the comment doing real work there: because our scripts chain, *Run All.R* only needs to call the last one. The other common style is scripts that *don't* source their predecessors, with *Run All.R* listing every stage in order. Both are fine. Pick one and be consistent – the failure mode is a mix, where some stages chain and some don't and nobody is sure what actually runs.
+
+## Save the Dataframe
+
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
+- `save()` and `load()`
+:::
+
+The last step of data processing – after cleaning, always – is to save the finished dataframe. The analysis scripts shouldn't re-read five years of IPEDS files every time you tweak a regression; they should load one finished object and get to work. Saving last also means the file on disk is always the *cleaned* sample, never a half-processed draft.
+
+`save()` writes R objects to a file – the convention is the `.Rdata` extension – and `load()` reads them back in, restoring each object under its original name. Save `df` into `data/saved data`.
+
+```{r}
+#| label: demo-save
+#| eval: false
+save(df, file = here("data","saved data","maindf.Rdata"))
+```
+
+Then any analysis script can begin with one line and have `df` back, exactly as cleaning left it:
+
+```{r}
+#| label: demo-load
+#| eval: false
+load(here("data","saved data","maindf.Rdata"))
+```
+
+The save belongs at the end of the data-compiling block in *Run All.R*, which completes it:
+
+```{r}
+#| label: workflow-runall-final
+#| eval: false
+#RUN ALL
+
+#===== LOAD PACKAGES =====
+if (!require("pacman")) {
+  install.packages("pacman")
+}
+pacman::p_load(readxl, here, tidyverse, modelsummary)
+
+#===== COMPILE DATA =====
+#clean data.R sources make variables.R, which sources import data.R
+source(here("scripts","data processing","clean data.R"))
+save(df, file = here("data","saved data","maindf.Rdata"))
+```
+
+When the analysis scripts exist, they'll get their own `#===== ANALYSIS =====` block of `source()` calls at the bottom, and *Run All.R* really will run all.
+
+## What's Next
+
+Data processing is done: original files in, one clean, saved dataframe out, and a single script that reproduces the whole thing from scratch. That's not a small thing – it's the part of a project most likely to be a tangle, and yours is a chain anyone can follow. Next, the payoff: the analysis.
