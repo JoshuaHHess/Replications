@@ -358,9 +358,6 @@ df2 <- read_csv(here(folder.path,"adm2019_rv.csv")) |> mutate(year = 2019)
 #combine dataframes
 df <- df |> bind_rows(df2)
 
-#combine dataframes
-df <- df |> bind_rows(df2)
-
 #overwrite df2 with next file (fine since that info is in df)
 df2 <- read_csv(here(folder.path,"adm2020_rv.csv")) |> mutate(year = 2020) #correct filename and year
 
