@@ -1,3 +1,7 @@
+---
+number-depth: 1
+---
+
 # Replication Product Example {#sec-walker-replication-product}
 
 Your finished product should address the four questions of scientific inquiry:
