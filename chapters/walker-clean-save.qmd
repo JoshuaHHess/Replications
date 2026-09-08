@@ -127,20 +127,20 @@ Start with one row per policy group.
 df |> group_by(repeal) |>
   summarize(
     schools = n_distinct(UNITID),
-    wshare_mean = mean(wshare),
-    wshare_sd = sd(wshare),
-    applicants = mean(APPLCN)
+    wshare_mean = mean(wshare, na.rm = TRUE),
+    wshare_sd = sd(wshare, na.rm = TRUE),
+    applicants = mean(APPLCN, na.rm = TRUE)
   )
 ```
 
-Don't just read the table – interrogate it. What's different about the two groups, and does it matter? For example: the average female share in repeal-state schools is about `r df |> filter(repeal == 1) |> pull(wshare) |> mean() |> round(2)`, versus `r df |> filter(repeal == 0) |> pull(wshare) |> mean() |> round(2)` in control states – women are a noticeably larger share of applicants in repeal states, and that was true *before* Dobbs was ever leaked. Why might that be? Regional differences in the kinds of schools, maybe, or in who applies to them. The good news is we don't have to explain it – the fixed effects will absorb any stable level difference – but a gap you know about and can't explain is exactly the kind of thing to note down before you interpret anything.
+The two groups look broadly similar – the means differ by a few points, which is small relative to how much schools vary within each group.
 
 The more interesting cut is by group *and* year, since the whole design turns on how the gap between the two groups moves over time. Computing it is a two-variable `group_by()`; the result, though, comes back long – one row per group-year – which is the right shape for computing and a clumsy shape for reading. `pivot_wider()` is `pivot_longer()`'s inverse: it spreads a variable's values out into column names, exactly the transformation we spent last chapter undoing.
 
 ```{r}
 #| label: demo-summary-yearly
 df |> group_by(repeal, year) |>
-  summarize(wshare = round(mean(wshare), 3), .groups = "drop") |>
+  summarize(wshare = round(mean(wshare, na.rm = TRUE), 3), .groups = "drop") |>
   pivot_wider(names_from = year, values_from = wshare)
 ```
 
