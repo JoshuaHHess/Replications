@@ -13,11 +13,11 @@ source(here("scripts","data processing","make variables.R"))
 
 At the end of @sec-walker-make-variables, `df` had one row per school-year with the policy (*repeal*), the outcome (*wshare*), and the heterogeneity variable (*rank2023*). It also had every school IPEDS knows about. The last data processing job is to restrict `df` to the sample in @walker2023anticipatory – *cleaning* – and then save the result so the analysis can pick it up without re-running any of this.
 
-A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. "Missing" alone can mean a dozen different things – never reported, reported as zero when it's really absent, suppressed for privacy, not applicable to that observation, lost in a bad merge – and each meaning calls for a different response. Variables from different sources have to be *harmonized* before they can even be compared: one file writes "AL", another "Alabama", a third "01", and all three mean the same state. And then come the judgment calls. Should an observation with a suspicious value be removed, or is it real? A school missing one year in the middle of the panel – can you interpolate it from its neighbors, or does that invent data? Every answer changes your sample, and your sample changes your results. There's a reason cleaning has a nightmare reputation.
+A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. "Missing" alone can mean a dozen different things – never reported, reported as zero when it's really absent, suppressed for privacy, not applicable to that observation, lost in a bad merge – and each calls for a different response. Variables from different sources have to be *harmonized* before they can even be compared: one file writes "AL", another "Alabama", a third "01", and all three mean the same state. And then come the judgment calls. Should an observation with a suspicious value be removed, or is it real? A school missing one year in the middle of the panel – can you interpolate it from its neighbors, or does that invent data? Every answer changes your sample, and your sample changes your results.
 
-Ours is going to be short and painless – and that's not luck. It's one of the reasons this particular replication was chosen. IPEDS is a well-maintained federal census and the paper defines its sample with three crisp rules, so cleaning here is just filtering. Enjoy it while it lasts.
+Ours is going to be short and painless. That's not luck. It's one of the reasons this particular replication was chosen. IPEDS is a well-maintained federal census, these surveys haven't changed recently, and the paper defines its sample with three crisp rules. Cleaning here is just filtering. Enjoy it while it lasts.
 
-Painless or not, cleaning gets its own script. Every `filter()` in it is a decision about who is in your sample, and those are exactly the decisions you (and anyone checking your work) will want to find, question, and change later. Keeping them in one small file with an honest name means nobody has to go hunting. Make a new R script in `scripts/data processing` and call it *clean data.R*. It starts the way the last one did – by sourcing its predecessor.
+Painless or not, cleaning gets its own script. Every `filter()` in it is a decision about who is in your sample, and those are exactly the decisions you (and anyone checking your work) will want to find, question, and change later. Keeping them in one small file with an honest name means nobody has to go hunting. Make a new R script in `scripts/data processing` and call it *clean data.R*. It starts the way the last one did – by sourcing its predecessor (which sources *make variables.R*, and will be discussed at the end of this chapter).
 
 ```{r}
 #| label: demo-source
@@ -29,20 +29,25 @@ source(here("scripts","data processing","make variables.R"))
 ## Clean Data
 
 ::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
-- `%in%`
 - `group_by()` and `ungroup()`
 - `n_distinct()` and `all()`
 :::
 
 Cleaning means restricting the sample to match the paper. There are three restrictions.
 
-1.  **Top 100.** Keep `rank2023` of 100 or less. That's 104 schools because of ties. This one filter does double duty: a school with no rank has `NA` for *rank2023*, and an `NA` fails the condition, so the unranked schools – territories included – drop out here too. That's the promise from last chapter kept.
+1.  Top 100: `df <- df |> filter(rank2023 <= 100)`. No more needs to be said!
 
-2.  **2018 to 2022.** Our *ADM* folder only has those years, so this drops nothing today. Keep it anyway. When you extend the data – and you will – the replication stays on the paper's window unless you change it on purpose. Store the years in a variable, `wyrs`, and use `%in%` to keep the rows whose `year` is in it.
+2.  Years span 2018 to 2022: `df <- df |> filter(2018 <= year & year <= 2022)` or `df <- df |> filter(year %in% 2018:2022)`. Note that `2018:2022` is how R generates a sequence of whole numbers, you can also use `seq(2018,2022,by=1)`.
 
-3.  **Complete data.** The event study compares each school to itself over time, so we want schools that are observed in all five years with a non-missing outcome. This is called a *balanced panel*. This is also where the school-years with an undefined *wshare* finally exit.
+3.  Complete data: @walker2023anticipatory restricts their sample to the schools that have data in every year. This is called a *balanced panel*. This is also where the school-years with an undefined *wshare* finally exit.
 
-The third one needs a new idea. `group_by(UNITID)` tells R to treat each school's rows as a group. A `filter()` on a grouped dataframe evaluates its conditions *within each group*, so `n_distinct(year) == length(wyrs)` asks "does this school have all five years?" and `all(!is.na(wshare))` asks "is the outcome never missing for this school?" Both are one `TRUE`/`FALSE` per school, so whole schools are kept or dropped. Then `ungroup()`.
+This last one needs a new idea. `group_by(UNITID)` tells R to treat each school's rows as a group. A `filter()` on a grouped dataframe evaluates its conditions *within each group*. We want to look at each school's data and ask if the number of unique years (so the number of disticnt years) is the same as the sample time frame. That is, since the data spans five years, 2018-2022 inclusive, each school should contribute exactly five years. This should get rid of any schools that have repeated years and any schools that skipped a year. We can do this with a filter on `n_distinct(year) == 5` . Now, a school could have failed to report applications. In that case, we would observe all five years (because they reported directory information) but the outcome variable would be `NA`. In fact, this did happen for some schools.
+
+```{r}
+df |> relocate(INSTNM,year,wshare,.after  = UNITID) |> filter(is.na(wshare)) |> head()
+```
+
+So, within a group of schools, we'll also make sure that *all* the years a school reports the women share of applicants have *no `NA`* with `all(!is.na(wshare))`. Then `ungroup()`.
 
 ::: {.callout-tip title="Coding Practices: Always ungroup()"}
 A grouped dataframe stays grouped. Every `mutate()`, `summarize()`, and `filter()` after that will operate group-by-group, whether you meant it or not. Call `ungroup()` as soon as you're done with the groups.
@@ -51,15 +56,12 @@ A grouped dataframe stays grouped. Every `mutate()`, `summarize()`, and `filter(
 ```{r}
 #| label: silent-clean
 #| include: false
-df <- df |> filter(rank2023 <= 100)
-wyrs <- 2018:2022
-df <- df |> filter(year %in% wyrs)
 df <- df |> group_by(UNITID) |>
-  filter(n_distinct(year) == length(wyrs), all(!is.na(wshare))) |>
+  filter(n_distinct(year) == length(2018:2022), all(!is.na(wshare))) |>
   ungroup()
 ```
 
-The whole script:
+Let's write something a little more flexible than the code above. We'll define the sequence of years that @walker2023anticipatory studies to by `wyears <- 2018:2022`. Using this in our workflow, we have:
 
 ```{r}
 #| label: workflow-clean
@@ -94,13 +96,7 @@ df |> distinct(UNITID, repeal) |> count(repeal, name = "schools")
 df |> distinct(STABBR, repeal) |> count(repeal, name = "states")
 ```
 
-That's `r df |> distinct(UNITID) |> nrow()` schools in `r df |> distinct(STABBR) |> nrow()` states. More than the paper, and that's expected – IPEDS covers every one of the ranked schools, while the paper was limited to the schools that publish a Common Data Set. If you want to see exactly which extra states are driving the difference, `df.policy`'s *In Sample* column – untouched this whole time – tells you which states were in the paper's sample.
-
-::: {.callout-tip title="Coding Practices: Compare to the Paper"}
-Every time you restrict the sample, count what's left and compare to the paper. Differences you can explain are fine – write the explanation down. Differences you can't explain are a red flag.
-:::
-
-And, as always, skim the important variables before moving on.
+That's `r df |> distinct(UNITID) |> nrow()` schools in `r df |> distinct(STABBR) |> nrow()` states. More than the paper, and that's expected – IPEDS covers every one of the ranked schools, while the paper was limited to the schools that publish a Common Data Set. If you want to see exactly which extra states are driving the difference, `df.policy`'s *In Sample* column – untouched this whole time – tells you which states were in the paper's sample.And, as always, skim the important variables before moving on.
 
 ```{r}
 #| label: demo-skim-final
@@ -116,9 +112,9 @@ df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
 - `pivot_wider()`
 :::
 
-You have the paper's sample. Before any model touches it, you should be able to describe it in plain numbers – how many schools of each type, what the outcome looks like in each group, how it moves over time. Summary statistics are how you build intuition for what the regression is about to formalize, and they're the first table in almost every paper for the same reason.
+You have the paper's sample. Before any model touches it, you should be able to describe it in plain numbers – how many schools of each type, what the outcome looks like in each group, how it moves over time. **Summary statistics** are how you build intuition for what the regression is about to formalize, and they're the first table in almost every paper for the same reason.
 
-The tool is `summarize()`. Like `mutate()`, it computes new variables from existing ones – but where `mutate()` adds a column and keeps every row, `summarize()` *collapses* the dataframe down to one row per group, keeping only what you computed. Pair it with `group_by()` and you get one row per group.
+The tool is `summarize()`. Like `mutate()`, it computes new variables from existing ones – but where `mutate()` adds a column and keeps every row, `summarize()` *collapses* the dataframe down to one row per group, keeping only what you computed (and grouping variables). Pair it with `group_by()` and you get one row per group.
 
 ::: {.callout-tip title="Coding Practices: summarize() vs mutate()"}
 Both compute new variables. `mutate()` keeps all your rows and adds a column; `summarize()` collapses each group to a single row. If your result should have as many rows as groups, you want `summarize()`.
@@ -137,7 +133,7 @@ df |> group_by(repeal) |>
   )
 ```
 
-Read it like a referee would. Schools in repeal states have a somewhat *higher* female share on average and somewhat fewer applicants. That level difference is fine – the fixed effects will absorb it – but it's exactly the kind of thing you want to know about your sample before you interpret anything.
+Don't just read the table – interrogate it. What's different about the two groups, and does it matter? For example: the average female share in repeal-state schools is about `r df |> filter(repeal == 1) |> pull(wshare) |> mean() |> round(2)`, versus `r df |> filter(repeal == 0) |> pull(wshare) |> mean() |> round(2)` in control states – women are a noticeably larger share of applicants in repeal states, and that was true *before* Dobbs was ever leaked. Why might that be? Regional differences in the kinds of schools, maybe, or in who applies to them. The good news is we don't have to explain it – the fixed effects will absorb any stable level difference – but a gap you know about and can't explain is exactly the kind of thing to note down before you interpret anything.
 
 The more interesting cut is by group *and* year, since the whole design turns on how the gap between the two groups moves over time. Computing it is a two-variable `group_by()`; the result, though, comes back long – one row per group-year – which is the right shape for computing and a clumsy shape for reading. `pivot_wider()` is `pivot_longer()`'s inverse: it spreads a variable's values out into column names, exactly the transformation we spent last chapter undoing.
 
