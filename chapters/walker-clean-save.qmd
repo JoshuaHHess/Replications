@@ -8,22 +8,23 @@ options(repos = c(CRAN = "https://cloud.r-project.org"))
 library(here)
 library(modelsummary)
 rm(list = ls())
+source(here("scripts","data processing","import data.R"))
 source(here("scripts","data processing","make variables.R"))
 ```
 
-At the end of @sec-walker-make-variables, `df` had one row per school-year with the policy (*repeal*), the outcome (*wshare*), and the heterogeneity variable (*rank2023*). It also had every school IPEDS knows about. The last data processing job is to restrict `df` to the sample in @walker2023anticipatory – *cleaning* – and then save the result so the analysis can pick it up without re-running any of this.
+At the end of @sec-walker-make-variables, `df` had one row per school-year with the policy (repeal), the outcome (wshare), and the heterogeneity variable (rank2023). It also had every school IPEDS knows about. The last data processing job is to restrict `df` to the sample in @walker2023anticipatory – cleaning – and then save the result so the analysis can pick it up without re-running any of this.
 
-A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. "Missing" alone can mean a dozen different things – never reported, reported as zero when it's really absent, suppressed for privacy, not applicable to that observation, lost in a bad merge – and each calls for a different response. Variables from different sources have to be *harmonized* before they can even be compared: one file writes "AL", another "Alabama", a third "01", and all three mean the same state. And then come the judgment calls. Should an observation with a suspicious value be removed, or is it real? A school missing one year in the middle of the panel – can you interpolate it from its neighbors, or does that invent data? Every answer changes your sample, and your sample changes your results.
+A warning before we start: cleaning is usually the messiest, most time-consuming part of empirical work. "Missing" alone can mean a dozen different things – never reported, reported as zero when it's really absent, suppressed for privacy, not applicable to that observation, lost in a bad merge – and each calls for a different response. Variables from different sources have to be harmonized before they can even be compared: one file writes "AL", another "Alabama", a third "01", and all three mean the same state. And then come the judgment calls. Should an observation with a suspicious value be removed, or is it real? A school missing one year in the middle of the panel – can you interpolate it from its neighbors, or does that invent data? Every answer changes your sample, and your sample changes your results.
 
 Ours is going to be short and painless. That's not luck. It's one of the reasons this particular replication was chosen. IPEDS is a well-maintained federal census, these surveys haven't changed recently, and the paper defines its sample with three crisp rules. Cleaning here is just filtering. Enjoy it while it lasts.
 
-Painless or not, cleaning gets its own script. Every `filter()` in it is a decision about who is in your sample, and those are exactly the decisions you (and anyone checking your work) will want to find, question, and change later. Keeping them in one small file with an honest name means nobody has to go hunting. Make a new R script in `scripts/data processing` and call it *clean data.R*. It starts the way the last one did – by sourcing its predecessor (which sources *make variables.R*, and will be discussed at the end of this chapter).
+Painless or not, cleaning gets its own script. Every `filter()` in it is a decision about who is in your sample, and those are exactly the decisions you (and anyone checking your work) will want to find, question, and change later. Keeping them in one small file with an honest name means nobody has to go hunting. Make a new R script in `scripts/data processing` and call it clean data.R. It starts the way the last one did – with a comment recording what it assumes: that make variables.R has been run and `df` is in the Environment. At the end of this chapter, one master script will make sure that assumption always holds.
 
 ```{r}
 #| label: demo-source
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","make variables.R"))
+#CLEAN DATA
+#assumes make variables.R has been run: df
 ```
 
 ## Clean Data
@@ -39,15 +40,15 @@ Cleaning means restricting the sample to match the paper. There are three restri
 
 2.  Years span 2018 to 2022: `df <- df |> filter(2018 <= year & year <= 2022)` or `df <- df |> filter(year %in% 2018:2022)`. Note that `2018:2022` is how R generates a sequence of whole numbers, you can also use `seq(2018,2022,by=1)`.
 
-3.  Complete data: @walker2023anticipatory restricts their sample to the schools that have data in every year. This is called a *balanced panel*. This is also where the school-years with an undefined *wshare* finally exit.
+3.  Complete data: @walker2023anticipatory restricts their sample to the schools that have data in every year. This is called a balanced panel. This is also where the school-years with an undefined wshare finally exit.
 
-This last one needs a new idea. `group_by(UNITID)` tells R to treat each school's rows as a group. A `filter()` on a grouped dataframe evaluates its conditions *within each group*. We want to look at each school's data and ask if the number of unique years (so the number of disticnt years) is the same as the sample time frame. That is, since the data spans five years, 2018-2022 inclusive, each school should contribute exactly five years. This should get rid of any schools that have repeated years and any schools that skipped a year. We can do this with a filter on `n_distinct(year) == 5` . Now, a school could have failed to report applications. In that case, we would observe all five years (because they reported directory information) but the outcome variable would be `NA`. In fact, this did happen for some schools.
+This last one needs a new idea. `group_by(UNITID)` tells R to treat each school's rows as a group. A `filter()` on a grouped dataframe evaluates its conditions within each group. We want to look at each school's data and ask if the number of unique years (so the number of disticnt years) is the same as the sample time frame. That is, since the data spans five years, 2018-2022 inclusive, each school should contribute exactly five years. This should get rid of any schools that have repeated years and any schools that skipped a year. We can do this with a filter on `n_distinct(year) == 5` . Now, a school could have failed to report applications. In that case, we would observe all five years (because they reported directory information) but the outcome variable would be `NA`. In fact, this did happen for some schools.
 
 ```{r}
 df |> relocate(INSTNM,year,wshare,.after  = UNITID) |> filter(is.na(wshare)) |> head()
 ```
 
-So, within a group of schools, we'll also make sure that *all* the years a school reports the women share of applicants have *no `NA`* with `all(!is.na(wshare))`. Then `ungroup()`.
+So, within a group of schools, we'll also make sure that all the years a school reports the women share of applicants have no `NA` with `all(!is.na(wshare))`. Then `ungroup()`.
 
 ::: {.callout-tip title="Coding Practices: Always ungroup()"}
 A grouped dataframe stays grouped. Every `mutate()`, `summarize()`, and `filter()` after that will operate group-by-group, whether you meant it or not. Call `ungroup()` as soon as you're done with the groups.
@@ -56,8 +57,11 @@ A grouped dataframe stays grouped. Every `mutate()`, `summarize()`, and `filter(
 ```{r}
 #| label: silent-clean
 #| include: false
+df <- df |> filter(rank2023 <= 100)
+wyears <- 2018:2022
+df <- df |> filter(year %in% wyears)
 df <- df |> group_by(UNITID) |>
-  filter(n_distinct(year) == length(2018:2022), all(!is.na(wshare))) |>
+  filter(n_distinct(year) == length(wyears), all(!is.na(wshare))) |>
   ungroup()
 ```
 
@@ -66,8 +70,8 @@ Let's write something a little more flexible than the code above. We'll define t
 ```{r}
 #| label: workflow-clean
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","make variables.R"))
+#CLEAN DATA
+#assumes make variables.R has been run: df
 
 #==== CLEAN DATA ====
 #top 100 in 2023 (104 schools because of ties)
@@ -75,12 +79,12 @@ source(here("scripts","data processing","make variables.R"))
 df <- df |> filter(rank2023 <= 100)
 
 #years in the paper
-wyrs <- 2018:2022
-df <- df |> filter(year %in% wyrs)
+wyears <- 2018:2022
+df <- df |> filter(year %in% wyears)
 
 #balanced panel: all years present and the outcome never missing
 df <- df |> group_by(UNITID) |>
-  filter(n_distinct(year) == length(wyrs), all(!is.na(wshare))) |>
+  filter(n_distinct(year) == length(wyears), all(!is.na(wshare))) |>
   ungroup()
 ```
 
@@ -96,14 +100,14 @@ df |> distinct(UNITID, repeal) |> count(repeal, name = "schools")
 df |> distinct(STABBR, repeal) |> count(repeal, name = "states")
 ```
 
-That's `r df |> distinct(UNITID) |> nrow()` schools in `r df |> distinct(STABBR) |> nrow()` states. More than the paper, and that's expected – IPEDS covers every one of the ranked schools, while the paper was limited to the schools that publish a Common Data Set. If you want to see exactly which extra states are driving the difference, `df.policy`'s *In Sample* column – untouched this whole time – tells you which states were in the paper's sample.And, as always, skim the important variables before moving on.
+That's `r df |> distinct(UNITID) |> nrow()` schools in `r df |> distinct(STABBR) |> nrow()` states. More than the paper, and that's expected – IPEDS covers every one of the ranked schools, while the paper was limited to the schools that publish a Common Data Set. If you want to see exactly which extra states are driving the difference, `df.policy`'s In Sample column – untouched this whole time – tells you which states were in the paper's sample.And, as always, skim the important variables before moving on.
 
 ```{r}
 #| label: demo-skim-final
 df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
 ```
 
-`wshare` is between 0 and 1 and never missing, `repeal` is 0 or 1, and `rank2023` runs from 1 to `r max(df$rank2023)` – tied schools share a rank value, which is why the ranks stop short of 100 even though the top-100 filter kept 104 schools. (The balanced panel then dropped `r 104 - (df |> distinct(UNITID) |> nrow())`, leaving `r df |> distinct(UNITID) |> nrow()`.) This is the paper's sample. Save the script as *clean data.R* in `scripts/data processing`.
+`wshare` is between 0 and 1 and never missing, `repeal` is 0 or 1, and `rank2023` runs from 1 to `r max(df$rank2023)` – tied schools share a rank value, which is why the ranks stop short of 100 even though the top-100 filter kept 104 schools. (The balanced panel then dropped `r 104 - (df |> distinct(UNITID) |> nrow())`, leaving `r df |> distinct(UNITID) |> nrow()`.) This is the paper's sample. Save the script as clean data.R in `scripts/data processing`.
 
 ## Summary Statistics
 
@@ -114,7 +118,7 @@ df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
 
 You have the paper's sample. Before any model touches it, you should be able to describe it in plain numbers – how many schools of each type, what the outcome looks like in each group, how it moves over time. **Summary statistics** are how you build intuition for what the regression is about to formalize, and they're the first table in almost every paper for the same reason.
 
-The tool is `summarize()`. Like `mutate()`, it computes new variables from existing ones – but where `mutate()` adds a column and keeps every row, `summarize()` *collapses* the dataframe down to one row per group, keeping only what you computed (and grouping variables). Pair it with `group_by()` and you get one row per group.
+The tool is `summarize()`. Like `mutate()`, it computes new variables from existing ones – but where `mutate()` adds a column and keeps every row, `summarize()` collapses the dataframe down to one row per group, keeping only what you computed (and grouping variables). Pair it with `group_by()` and you get one row per group.
 
 ::: {.callout-tip title="Coding Practices: summarize() vs mutate()"}
 Both compute new variables. `mutate()` keeps all your rows and adds a column; `summarize()` collapses each group to a single row. If your result should have as many rows as groups, you want `summarize()`.
@@ -135,37 +139,61 @@ df |> group_by(repeal) |>
 
 The two groups look broadly similar – the means differ by a few points, which is small relative to how much schools vary within each group.
 
-The more interesting cut is by group *and* year, since the whole design turns on how the gap between the two groups moves over time. Computing it is a two-variable `group_by()`; the result, though, comes back long – one row per group-year – which is the right shape for computing and a clumsy shape for reading. `pivot_wider()` is `pivot_longer()`'s inverse: it spreads a variable's values out into column names, exactly the transformation we spent last chapter undoing.
+The more interesting cut is by group and year, since the whole design turns on how the gap between the two groups moves over time. Computing it is a two-variable `group_by()`; the result, though, comes back long – one row per group-year – which is the right shape for computing and a clumsy shape for reading. `pivot_wider()` is `pivot_longer()`'s inverse: it spreads a variable's values out into column names, exactly the transformation we spent last chapter undoing.
 
 ```{r}
 #| label: demo-summary-yearly
+#| echo: false
 df |> group_by(repeal, year) |>
   summarize(wshare = round(mean(wshare, na.rm = TRUE), 3), .groups = "drop") |>
   pivot_wider(names_from = year, values_from = wshare)
 ```
 
-Now squint at the gap between the two rows, year by year. It sits steady at around 3.4 percentage points from 2018 through 2021 – and then narrows in 2022, the first application cycle after *Dobbs*. That's the paper's finding, visible in raw means before a single regression: a stable pre-period gap (the parallel-trends eyeball from @sec-walker-introduction) and a post-treatment dip. The event study will put a confidence interval on it; the raw table is why you'll believe the event study.
+Now squint at the gap between the two rows, year by year. It sits steady at around 3.4 percentage points from 2018 through 2021 – and then narrows in 2022, the first application cycle after Dobbs. That's the paper's finding, visible in raw means before a single regression: a stable pre-period gap (the parallel-trends eyeball from @sec-walker-introduction) and a post-treatment dip. The **event study** will put a confidence interval on it; the raw table is why you'll believe the event study.
+
+In applied microeconomics, **event studies** are very commonly used to infer whether a policy caused an outcome – causality. These techniques work by comparing the difference between a treated group and a control group (one difference) before and after the policy occurs (another difference). They are often called *difference-in-difference* techniques. We want the difference between the states with bans (treated) and the states without bans (control) before 2021 and after 2021.
+
+In the table below, the row called *difference* computes the *ban - control* for each year. The row below that, *did* (*difference-in-difference),* subtracts the 2021 *difference* value (`r df |> filter(year == 2021) |> summarize(gap = mean(wshare[repeal == 1]) - mean(wshare[repeal == 0])) |> pull(gap) |> round(3)`) from all the other *difference* values.
+
+```{r}
+df |>
+  group_by(repeal, year) |>
+  summarize(wshare = mean(wshare, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(names_from = repeal, values_from = wshare) |>
+  mutate(
+    difference = `1` - `0`,
+    did = difference - difference[year == 2021]
+  ) |>
+  rename(control = `0`, ban = `1`) |>
+  pivot_longer(-year, names_to = "group", values_to = "wshare") |>
+  mutate(wshare = round(wshare, 3)) |>
+  pivot_wider(names_from = year, values_from = wshare)
+```
+
+We note the 2021 *did* value is mechanically zero. We subtracted `r df |> filter(year == 2021) |> summarize(gap = mean(wshare[repeal == 1]) - mean(wshare[repeal == 0])) |> pull(gap) |> round(3)` from itself. The pre-2021 values are all quite close to zero. Whether they satisfy the parallel trends assumption (REFERENCE NEEDED), requires a more sophisticated approach that we'll implement soon. We can interpret the 2022 value of `r df |> summarize(did = (mean(wshare[repeal == 1 & year == 2022]) - mean(wshare[repeal == 0 & year == 2022])) - (mean(wshare[repeal == 1 & year == 2021]) - mean(wshare[repeal == 0 & year == 2021]))) |> pull(did) |> round(3)` to mean that, on average, the women's share of applications to schools in ban states declined after 2021. This is not sufficient, in economics, to say that it was caused by anticipation of *Dobbs*, but it's intriguing enough to continue going forward.
 
 ## Run All
 
 ::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `require()`
-- a *Run All* script
+- a Run All script
 :::
 
-Step back and look at what you've built: three scripts, each doing one job, each starting by sourcing the one before it. *import data.R* reads the original files, *make variables.R* builds the variables, *clean data.R* restricts the sample. The chain means running the last script runs the whole pipeline.
+Step back and look at what you've built: three scripts, each doing one job. import data.R reads the original files, make variables.R builds the variables, clean data.R restricts the sample. Each one opens with a comment stating what it assumes has already run – but nothing yet *enforces* that order.
 
-That knowledge currently lives only in your head. Someone opening this project cold – including future you – shouldn't have to reconstruct which script is the entry point. So we write it down as a script: *Run All.R*, saved at the top of `scripts/`. One file that runs the entire project from original data to final output.
+That knowledge currently lives only in your head. Someone opening this project cold – including future you – shouldn't have to reconstruct which script runs first. So we write the order down as a script: Run All.R, saved at the top of `scripts/`. One file that runs the entire project, in the right sequence, from original data to final output.
 
-Before writing it, one housekeeping decision: where do packages load? Right now they load inside *import data.R*, which works but buries your dependencies in the middle of the chain. Better to make them explicit, in one of two places:
+Before writing it, one housekeeping decision: where do packages load? Right now they load inside import data.R, which works but buries your dependencies in the middle of the pipeline. Better to make them explicit, in one of two places:
 
-- **Top of *Run All.R*.** Everything the project needs is the first thing anyone reads. Simple, and right for a project this size.
+- **Top of Run All.R.** Everything the project needs is the first thing anyone reads. Simple, and right for a project this size.
 
-- **A separate *setup.R*, sourced first.** Once the package list grows – modeling packages, table packages, conflict preferences – it starts to crowd *Run All.R*. Moving it to its own script keeps *Run All.R* readable as a table of contents, and other entry points (an analysis-only session, say) can source the same *setup.R* and get an identical environment.
+- **A separate setup.R, sourced first.** Once the package list grows – modeling packages, table packages, conflict preferences – it starts to crowd Run All.R. Moving it to its own script keeps Run All.R readable as a table of contents, and other entry points (an analysis-only session, say) can source the same setup.R and get an identical environment.
 
-Either is fine; the point is that dependencies live somewhere explicit and load *first*, so a missing package fails loudly at the top instead of halfway through a forty-minute run. We'll use the first option here, and `pacman::p_load()` is harmless to call twice – it only installs what's missing – so the loads inside *import data.R* can stay.
+Either is fine; the point is that dependencies live somewhere explicit and load first, so a missing package fails loudly at the top instead of halfway through a forty-minute run. We'll use the first option here. The loads inside import data.R can stay – `pacman::p_load()` only installs what's missing, so calling it twice costs nothing – but now anyone opening Run All.R sees the full dependency list without hunting for it.
 
 One wrinkle: `p_load()` is itself from a package. `require()` is like `library()` except it returns `FALSE` instead of an error when the package is missing, which makes it the standard bootstrap idiom: try to load pacman, install it if that fails, and from then on pacman handles everything else.
+
+Then the scripts, called one at a time, in order.
 
 ```{r}
 #| label: workflow-runall
@@ -179,11 +207,14 @@ if (!require("pacman")) {
 pacman::p_load(readxl, here, tidyverse, modelsummary)
 
 #===== COMPILE DATA =====
-#clean data.R sources make variables.R, which sources import data.R
+source(here("scripts","data processing","import data.R"))
+source(here("scripts","data processing","make variables.R"))
 source(here("scripts","data processing","clean data.R"))
 ```
 
-Note the comment doing real work there: because our scripts chain, *Run All.R* only needs to call the last one. The other common style is scripts that *don't* source their predecessors, with *Run All.R* listing every stage in order. Both are fine. Pick one and be consistent – the failure mode is a mix, where some stages chain and some don't and nobody is sure what actually runs.
+Read that block top to bottom and you know the whole pipeline: import, make variables, clean. Each `source()` leaves its results in the Environment for the next one to pick up, which is exactly the assumption each script's opening comment records.
+
+You could instead have each script `source()` its own predecessor and let Run All.R call only the last one. That works, but it hides the order inside the scripts, and running any one of them re-runs everything before it. Listing the stages here keeps the sequence in one visible place – and lets you re-run just the step you're working on.
 
 ## Save the Dataframe
 
@@ -191,7 +222,7 @@ Note the comment doing real work there: because our scripts chain, *Run All.R* o
 - `save()` and `load()`
 :::
 
-The last step of data processing – after cleaning, always – is to save the finished dataframe. The analysis scripts shouldn't re-read five years of IPEDS files every time you tweak a regression; they should load one finished object and get to work. Saving last also means the file on disk is always the *cleaned* sample, never a half-processed draft.
+The last step of data processing – after cleaning, always – is to save the finished dataframe. The analysis scripts shouldn't re-read five years of IPEDS files every time you tweak a regression; they should load one finished object and get to work. Saving last also means the file on disk is always the cleaned sample, never a half-processed draft.
 
 `save()` writes R objects to a file – the convention is the `.Rdata` extension – and `load()` reads them back in, restoring each object under its original name. Save `df` into `data/saved data`.
 
@@ -209,7 +240,7 @@ Then any analysis script can begin with one line and have `df` back, exactly as 
 load(here("data","saved data","maindf.Rdata"))
 ```
 
-The save belongs at the end of the data-compiling block in *Run All.R*, which completes it:
+The save belongs at the end of the data-compiling block in Run All.R, which completes it:
 
 ```{r}
 #| label: workflow-runall-final
@@ -223,13 +254,14 @@ if (!require("pacman")) {
 pacman::p_load(readxl, here, tidyverse, modelsummary)
 
 #===== COMPILE DATA =====
-#clean data.R sources make variables.R, which sources import data.R
+source(here("scripts","data processing","import data.R"))
+source(here("scripts","data processing","make variables.R"))
 source(here("scripts","data processing","clean data.R"))
 save(df, file = here("data","saved data","maindf.Rdata"))
 ```
 
-When the analysis scripts exist, they'll get their own `#===== ANALYSIS =====` block of `source()` calls at the bottom, and *Run All.R* really will run all.
+When the analysis scripts exist, they'll get their own `#===== ANALYSIS =====` block of `source()` calls at the bottom, and Run All.R really will run all.
 
 ## What's Next
 
-Data processing is done: original files in, one clean, saved dataframe out, and a single script that reproduces the whole thing from scratch. That's not a small thing – it's the part of a project most likely to be a tangle, and yours is a chain anyone can follow. Next, the payoff: the analysis.
+Data processing is done: original files in, one clean, saved dataframe out, and a single script that reproduces the whole thing from scratch. That's not a small thing – it's the part of a project most likely to be a tangle, and yours is three short steps anyone can follow. Next, the payoff: the analysis.

@@ -1,8 +1,6 @@
 #MAKE VARIABLES
 #builds df: one row per school-year with repeal, wshare, and rank2023
-
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R"))
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data

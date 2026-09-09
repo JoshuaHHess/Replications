@@ -38,15 +38,15 @@ Now, we need those four dataframes in our *Environment* (upper right of Rstudio)
 Keep scripts as separate files whose name (or path) indicates what they do. Call the scripts with `source()`.
 :::
 
-Let's start our script!
+Run it in the console and the four dataframes are back:
 
 ```{r}
 #| label: demo-source
 #| eval: false
-
-#===== LOAD DATAFRAMES =====
 source(here("scripts","data processing","import data.R")) #or whatever you named your script
 ```
+
+Our new script will *assume* that has been done, and say so in a comment on its first line. Recording your assumptions right where the next reader will trip over them is cheap insurance – and at the end of the unit, one master script will make sure everything actually runs in the right order.
 
 ## Policy Variable
 
@@ -119,8 +119,8 @@ df <- df.adm |> left_join(df.hd, join_by(UNITID, year))
 ```{r}
 #| label: workflow-combine
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
+#MAKE VARIABLES
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data
@@ -161,8 +161,8 @@ df <- df |> mutate(year = as.numeric(year))
 ```{r}
 #| label: workflow-year
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
+#MAKE VARIABLES
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data
@@ -270,8 +270,8 @@ Default to `left_join()` from the dataframe that defines your sample. `right_joi
 ```{r}
 #| label: workflow-right-join
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
+#MAKE VARIABLES
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data
@@ -326,8 +326,8 @@ Add this to the workflow. Make sure to check your rows!
 ```{r}
 #| label: workflow-variables
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
+#MAKE VARIABLES
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data
@@ -389,8 +389,8 @@ Let's add the outcome variable to our workflow.
 ```{r}
 #| label: workflow-outcome
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
+#MAKE VARIABLES
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data
@@ -542,8 +542,8 @@ Our current workflow is then:
 ```{r}
 #| label: workflow-hetero
 #| eval: false
-#===== LOAD DATAFRAMES =====
-source(here("scripts","data processing","import data.R")) #or whatever you named your script
+#MAKE VARIABLES
+#assumes import data.R has been run: df.rank, df.adm, df.hd, df.policy
 
 #==== COMBINE IPEDS DATA ====
 #add directory information to the applications data
