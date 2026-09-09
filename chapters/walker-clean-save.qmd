@@ -88,6 +88,10 @@ df <- df |> group_by(UNITID) |>
   ungroup()
 ```
 
+That's it for this script. Save it!
+
+### Check the Data
+
 Now compare to the paper. @walker2023anticipatory have 71 schools (19 in repeal states and 52 in control states) across 27 states (8 repeal and 19 control). We have
 
 ```{r}
@@ -109,7 +113,7 @@ df |> select(year, wshare, repeal, rank2023, APPLCN) |> datasummary_skim()
 
 `wshare` is between 0 and 1 and never missing, `repeal` is 0 or 1, and `rank2023` runs from 1 to `r max(df$rank2023)` – tied schools share a rank value, which is why the ranks stop short of 100 even though the top-100 filter kept 104 schools. (The balanced panel then dropped `r 104 - (df |> distinct(UNITID) |> nrow())`, leaving `r df |> distinct(UNITID) |> nrow()`.) This is the paper's sample. Save the script as clean data.R in `scripts/data processing`.
 
-## Summary Statistics
+### Summary Statistics
 
 ::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
 - `summarize()`
@@ -151,6 +155,8 @@ df |> group_by(repeal, year) |>
 
 Now squint at the gap between the two rows, year by year. It sits steady at around 3.4 percentage points from 2018 through 2021 – and then narrows in 2022, the first application cycle after Dobbs. That's the paper's finding, visible in raw means before a single regression: a stable pre-period gap (the parallel-trends eyeball from @sec-walker-introduction) and a post-treatment dip. The **event study** will put a confidence interval on it; the raw table is why you'll believe the event study.
 
+### Event Studies
+
 In applied microeconomics, **event studies** are very commonly used to infer whether a policy caused an outcome – causality. These techniques work by comparing the difference between a treated group and a control group (one difference) before and after the policy occurs (another difference). They are often called *difference-in-difference* techniques. We want the difference between the states with bans (treated) and the states without bans (control) before 2021 and after 2021.
 
 In the table below, the row called *difference* computes the *ban - control* for each year. The row below that, *did* (*difference-in-difference),* subtracts the 2021 *difference* value (`r df |> filter(year == 2021) |> summarize(gap = mean(wshare[repeal == 1]) - mean(wshare[repeal == 0])) |> pull(gap) |> round(3)`) from all the other *difference* values.
@@ -183,38 +189,25 @@ Step back and look at what you've built: three scripts, each doing one job. impo
 
 That knowledge currently lives only in your head. Someone opening this project cold – including future you – shouldn't have to reconstruct which script runs first. So we write the order down as a script: Run All.R, saved at the top of `scripts/`. One file that runs the entire project, in the right sequence, from original data to final output.
 
-Before writing it, one housekeeping decision: where do packages load? Right now they load inside import data.R, which works but buries your dependencies in the middle of the pipeline. Better to make them explicit, in one of two places:
-
-- **Top of Run All.R.** Everything the project needs is the first thing anyone reads. Simple, and right for a project this size.
-
-- **A separate setup.R, sourced first.** Once the package list grows – modeling packages, table packages, conflict preferences – it starts to crowd Run All.R. Moving it to its own script keeps Run All.R readable as a table of contents, and other entry points (an analysis-only session, say) can source the same setup.R and get an identical environment.
-
-Either is fine; the point is that dependencies live somewhere explicit and load first, so a missing package fails loudly at the top instead of halfway through a forty-minute run. We'll use the first option here. The loads inside import data.R can stay – `pacman::p_load()` only installs what's missing, so calling it twice costs nothing – but now anyone opening Run All.R sees the full dependency list without hunting for it.
-
-One wrinkle: `p_load()` is itself from a package. `require()` is like `library()` except it returns `FALSE` instead of an error when the package is missing, which makes it the standard bootstrap idiom: try to load pacman, install it if that fails, and from then on pacman handles everything else.
-
-Then the scripts, called one at a time, in order.
+Creating this script means going back and editing some existing work, but if you proceed in order, it will ensure things continue to work.
 
 ```{r}
-#| label: workflow-runall
-#| eval: false
-#RUN ALL
-
+#RUN ALL--top level script that sources all others 
 #===== LOAD PACKAGES =====
 if (!require("pacman")) {
   install.packages("pacman")
 }
 pacman::p_load(readxl, here, tidyverse, modelsummary)
 
-#===== COMPILE DATA =====
+#===== DATA PROCESSING ====
 source(here("scripts","data processing","import data.R"))
 source(here("scripts","data processing","make variables.R"))
 source(here("scripts","data processing","clean data.R"))
 ```
 
-Read that block top to bottom and you know the whole pipeline: import, make variables, clean. Each `source()` leaves its results in the Environment for the next one to pick up, which is exactly the assumption each script's opening comment records.
+Now *import data.R*, loaded packages and both *make variable.R* and *import data.R* sourced their predecessors. We'd like to edit those files to remove those lines since it's unnecessary. Before doing that, you may want to make a commit in case things go sideways.
 
-You could instead have each script `source()` its own predecessor and let Run All.R call only the last one. That works, but it hides the order inside the scripts, and running any one of them re-runs everything before it. Listing the stages here keeps the sequence in one visible place – and lets you re-run just the step you're working on.
+One wrinkle: `p_load()` is itself from a package. `require()` is like `library()` except it returns `FALSE` instead of an error when the package is missing, which makes it the standard bootstrap idiom: try to load pacman, install it if that fails, and from then on pacman handles everything else.
 
 ## Save the Dataframe
 
@@ -253,10 +246,11 @@ if (!require("pacman")) {
 }
 pacman::p_load(readxl, here, tidyverse, modelsummary)
 
-#===== COMPILE DATA =====
+#===== DATA PROCESSING ====
 source(here("scripts","data processing","import data.R"))
 source(here("scripts","data processing","make variables.R"))
 source(here("scripts","data processing","clean data.R"))
+
 save(df, file = here("data","saved data","maindf.Rdata"))
 ```
 

@@ -50,7 +50,7 @@ The current structure is
 
 4.  @sec-walker-make-variables shows how to make the policy, outcome, and heterogeneous variables — not controls in this replication
 
-5.  Cleaning, Final Dataframe, and Run All discusses matching the data to @walker2023anticipatory's sample, saving the dataframe, and making a Run All script to organize the files.
+5.  @sec-walker-clean-save discusses matching the data to @walker2023anticipatory's sample, saving the dataframe, and making a Run All script to organize the files.
 
 6.  Analysis (in progress, not yet in the book) will work through the analysis and generation of results
 
