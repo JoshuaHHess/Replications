@@ -1,32 +1,425 @@
-# Analysis {#sec-walker-analysis}
+# Analysis: Fixed Effects and the Main Result {#sec-walker-analysis}
 
-Before you run anything, it's worth understanding *why* the model needs three separate fixed effects, not just trusting the output once it runs.
+```{r}
+#| label: silent-analysis-setup
+#| include: false
 
-If you estimated the relationship between $Repeal_j$ and $Share_{ijt}$ with plain OLS — no fixed effects at all — the result would be contaminated by omitted variable bias. Suppose, just for illustration, that women's colleges happen to be somewhat more common in states that didn't ban abortion. Women's colleges also have a much higher female applicant share for reasons that have nothing to do with any 2022 policy. Without fixed effects, that persistent, pre-existing difference would get folded into the estimated effect of $Repeal_j$ — it would look like the ban caused a gap that was actually there all along.
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+library(here)
+library(tidyverse)
+library(fixest)
+load(here("data", "saved data", "maindf.Rdata"))
 
-Fixed effects fix this by *de-meaning*: subtracting each group's own average from every observation in that group, so the model compares observations within a group instead of across fundamentally different groups. Concretely, in this model:
+uf <- df |> filter(UNITID == 134130) |> arrange(year)
+uf_school_mean <- mean(uf$wshare)
+uf_2018 <- uf |> filter(year == 2018) |> pull(wshare)
+uf_2022 <- uf |> filter(year == 2022) |> pull(wshare)
+mean_2022 <- df |> filter(year == 2022) |> summarize(mean(wshare)) |> pull()
+grand_wshare_mean <- mean(df$wshare)
+format_three <- function(x) formatC(x, format = "f", digits = 3)
+format_four <- function(x) formatC(x, format = "f", digits = 4)
+format_five <- function(x) formatC(x, format = "f", digits = 5)
+```
 
-- $\delta_i$, the **institution fixed effect**, subtracts each school's own average $Share$ across all five years. After that subtraction, a women's college isn't "higher than average" anymore — what's left is that school's own deviation from its own typical value. This is what lets the model compare a school to itself over time, instead of to a fundamentally different kind of school.
-- $\tau_t$, the **year fixed effect**, subtracts the average $Share$ across every school in a given year. This absorbs anything that shifted applications everywhere at once in a particular year — a nationwide move toward test-optional admissions, say, or a post-pandemic surge in applications — so a shock common to every school doesn't get mistaken for a state-specific policy effect.
-- $\varphi_j$, the **state fixed effect**, subtracts each state's own average, absorbing whatever is persistently different about one state versus another that has nothing to do with the ban itself — regional draw, in-state tuition policy, or anything else that's roughly constant about that state across the whole sample.
+Data processing is over. You have one clean row for every school-year, and you have already looked at the raw means. Now we get to ask the question that motivated all of that work: did the gap in women's share of applicants change differently for schools in states where abortion would be banned?
 
-Once all three are removed, whatever variation is left is how one specific school, in one specific state, deviated from its own norm in one specific year — after already stripping out whatever every school did that year and whatever was persistently true of its state. That's the variation the $\alpha$'s are estimated from. Look at your own data for a school or two and see if you can spot both the institution-level and year-level patterns before moving on.
+The temptation is to jump straight to a regression and trust the coefficient. Resist that. First look at what a very simple model captures. Then make the comparison increasingly more like the one we actually want. That way, fixed effects are not a magic incantation at the end of a long formula. They are a response to a problem you can see in the data.
 
-Estimate the model with `fixest::feols()`, using `i()` to build the year-by-treatment interactions instead of typing each one out by hand:
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
+- `feols()`
+- `i()`
+- institution and year fixed effects
+- `summary()` and `iplot()`
+:::
 
-``` r
-model <- feols(
-  women_share ~ i(year, repeal, ref = 2021) | UNITID + STABBR + year,
+## Start with the Cross-School Difference
+
+There are `r nrow(df)` school-years in this cleaned sample: `r df |> distinct(UNITID) |> nrow()` schools, observed in each of the five years from 2018 through 2022. In this project, `repeal == 1` marks schools in states classified as banned (the ban, or treated, group); `repeal == 0` marks the comparison group. It is a time-invariant group label here: every school stays in the same group for all five years. That last part matters quite a bit.
+
+Start with the bluntest possible model:
+
+$$
+\text{wshare}_{ijt}
+= \beta_0 + \beta_1\,\text{repeal}_{j} + \varepsilon_{ijt}.
+$$
+
+Here, $\text{wshare}_{ijt}$ is the women's share of applicants at school $i$, in state $j$, in year $t$. The variable $\text{repeal}_{j}$ is the group's 0-or-1 label. It has no $i$ or $t$ subscript because a school stays in the same group in every year.
+
+As in the introduction, let's do something we really shouldn't: take a derivative of an indicator variable. It is not technically correct because $\text{repeal}_j$ can only be 0 or 1. But the intuition comes through, and that is what matters here.
+
+$$
+\frac{\partial \text{wshare}_{ijt}}
+{\partial \text{repeal}_j}
+= \beta_1.
+$$
+
+Read that derivative as flipping the group label from 0 to 1, not as making an infinitesimal change. In this simple model, $\beta_1$ is the ban-minus-control predicted difference.
+
+The exact discrete version says the same thing:
+
+$$
+\text{wshare}(\text{repeal}=1)
+- \text{wshare}(\text{repeal}=0)
+= \beta_1.
+$$
+
+So $\beta_0$ is the average women's share in the comparison group, and $\beta_1$ is the pooled ban-minus-control difference across all five years. It is a descriptive group difference, not yet a policy effect.
+
+```{r}
+#| label: model-between
+
+between_model <- feols(
+  wshare ~ repeal,
   cluster = ~STABBR,
   data = df
 )
 
-summary(model)
-iplot(model)
+summary(between_model)
 ```
 
-`iplot()` gives you a quick, unstyled event-study plot straight from the model — good for checking your results as you go. For anything you'll put in the README or write-up, tidy the model's output into a plain dataframe with `broom::tidy()`, then build the plot yourself in `ggplot2` so you control the labels, theme, and reference line. Save it with `ggsave()` to `results/figures/`.
+This model has no fixed effects, no year controls, and no claim to be an event study. It pools all five years together and asks whether a school in the ban group has a different women's applicant share than a school in the comparison group.
 
-## Results
+The `repeal` coefficient is about `r round(coef(between_model)["repeal"] * 100, 1)` percentage points. That is a real descriptive fact about this sample: the average women's share is higher at the ban-state schools. It is **not** evidence that anticipated *Dobbs* caused anything. The pooled coefficient mixes years together and also bundles the group label with every long-running difference between its schools and the comparison schools. They could have different academic programs, student populations, regional applicant pools, or a hundred other persistent differences.
 
-Assemble your figures and summary statistics into the README, the same way the Walker project's README does it. As an optional stretch goal, Quarto can also turn a `.qmd` file into a slide deck by setting `format: beamer` (or `format: revealjs` for HTML slides) — if you want practice presenting results instead of just writing them up, that's worth trying once your figures are done.
+This is the ordinary least squares problem in its most visible form. A cross-school comparison bundles together a policy category and every long-running difference between the schools in that category.
+
+## See the Raw Event-Study Difference
+
+The research question is not really about the overall level difference. It is about whether the *gap* between the two groups changes. You already calculated that table at the end of data processing. Build it again, this time keeping the difference-in-difference calculation in view.
+
+```{r}
+#| label: raw-event-study-table
+
+raw_gaps <- df |>
+  group_by(repeal, year) |>
+  summarize(wshare = mean(wshare), .groups = "drop") |>
+  mutate(group = if_else(repeal == 1, "ban", "control")) |>
+  select(year, group, wshare) |>
+  pivot_wider(names_from = group, values_from = wshare) |>
+  mutate(
+    gap = ban - control,
+    relative_to_2021 = gap - gap[year == 2021]
+  )
+
+raw_gaps
+```
+
+In 2021, the ban-minus-control gap is `r raw_gaps |> filter(year == 2021) |> pull(gap) |> round(3)`. In 2022 it is `r raw_gaps |> filter(year == 2022) |> pull(gap) |> round(3)`. The difference-in-difference is `r raw_gaps |> filter(year == 2022) |> pull(relative_to_2021) |> round(3)`, or `r round(raw_gaps |> filter(year == 2022) |> pull(relative_to_2021) * 100, 1)` percentage points. The negative sign means the ban-minus-control gap narrowed by about 0.7 percentage points.
+
+We can put those same group-year comparisons into a regression. This still has no institution fixed effects. It just writes every part of the difference-in-difference comparison explicitly:
+
+$$
+\begin{aligned}
+\text{wshare}_{ijt} ={}&
+\beta_0 + \beta_1\,\text{repeal}_j \\
+&+ \sum_{\ell \ne 2021}
+\gamma_\ell \mathbb{1}(t = \ell) \\
+&+ \sum_{\ell \ne 2021}
+\delta_\ell \left[
+\text{repeal}_j \times \mathbb{1}(t = \ell)
+\right] + \varepsilon_{ijt}.
+\end{aligned}
+$$
+
+Here, $\beta_1$ is the 2021 ban-minus-control gap, the $\gamma_\ell$ terms are the comparison group's shifts from 2021, and the $\delta_\ell$ terms are the event-study difference-in-difference estimates. Leaving 2021 out of both sums makes it the reference year.
+
+Use the same informal derivative trick:
+
+$$
+\frac{\partial \text{wshare}_{ijt}}
+{\partial \text{repeal}_j}
+= \beta_1 +
+\sum_{\ell \ne 2021}
+\delta_\ell \mathbb{1}(t = \ell).
+$$
+
+In 2022, the 2022 indicator equals 1 and the others equal 0, so the group difference is $\beta_1 + \delta_{2022}$. That makes $\delta_{2022}$ the change in the group difference relative to 2021—the event-study estimate we care about.
+
+```{r}
+#| label: raw-event-study-model
+
+raw_event_study <- feols(
+  wshare ~ repeal +
+    i(year, ref = 2021) +
+    i(year, repeal, ref = 2021),
+  cluster = ~STABBR,
+  data = df
+)
+
+summary(raw_event_study)
+```
+
+There is a lot packed into that formula, so take it slowly.
+
+- `repeal` is the ban-control difference in the reference year, 2021.
+- `i(year, ref = 2021)` makes a dummy for each non-2021 year. Those terms describe how the control group changes relative to 2021.
+- `i(year, repeal, ref = 2021)` makes the interactions we care about. Each one is the extra change for ban-state schools in that year, relative to the 2021 gap.
+
+The last set of coefficients are the event-study estimates. Because this is a balanced panel and the model has a group indicator, year indicators, and their interactions, its point estimates are exactly the raw relative-to-2021 gaps in the table above.
+
+Adding school fixed effects changes the comparison mechanically: the raw difference-in-difference compares group-year averages, while the fixed-effect model first removes each school's own usual level and then estimates the event terms from the remaining within-school movement. In this particular balanced data set, with a group label that never changes and a separate interaction for every year, the two models happen to have the same event-study point estimates. That is expected, not evidence that fixed effects did nothing. They make the identifying comparison explicit; in a panel where schools enter, leave, or change composition, the estimates can move. Fixed effects do not, by themselves, solve attrition or every other design problem.
+
+A small vocabulary point: the year indicators in this model do the same mathematical job as year fixed effects. We wrote them out as ordinary right-hand-side terms because there are only five years and it lets you see the moving parts. In a moment, `| year` will absorb them more compactly.
+
+But this version still treats, say, the University of Florida and Florida State University as interchangeable observations from the same treated group. They are not. Their women's applicant shares have different normal levels, even though both schools are in Florida. That is where institution fixed effects enter.
+
+## What De-meaning Actually Does
+
+Fixed effects are often described as "controlling for a bunch of stuff." That is technically true and not very helpful. A more useful description is that fixed effects compare a school to itself.
+
+Take the University of Florida. Its own average women's applicant share in this five-year sample is `r format_three(uf_school_mean)`. In 2018, its share was `r format_three(uf_2018)`. The school-level de-meaned value is therefore:
+
+$$
+`r format_three(uf_2018)` - `r format_three(uf_school_mean)` =
+`r format_three(uf_2018 - uf_school_mean)`.
+$$
+
+In plain English: University of Florida's 2018 share was about half a percentage point above **its own** usual share. We are no longer comparing it to a school in California, New Jersey, or even across town. We are asking whether it was above or below its own normal level.
+
+Here are all five University of Florida observations, with the arithmetic exposed. The `.by = UNITID` line asks `dplyr` to calculate a separate mean within each school; `.by = year` does the same within each calendar year. It is a compact alternative to grouping, calculating, and ungrouping by hand.
+
+```{r}
+#| label: demeaned-data-example
+
+df_demeaned <- df |>
+  mutate(school_mean = mean(wshare), .by = UNITID) |>
+  mutate(year_mean = mean(wshare), .by = year) |>
+  mutate(
+    grand_mean = mean(wshare),
+    school_demeaned = wshare - school_mean,
+    two_way_demeaned = wshare - school_mean - year_mean + grand_mean
+  )
+
+df_demeaned |>
+  filter(UNITID == 134130) |>
+  select(year, wshare, school_mean, year_mean, grand_mean,
+         school_demeaned, two_way_demeaned) |>
+  mutate(across(-year, ~ round(.x, 3)))
+```
+
+The table gives the arithmetic, but a picture makes the first subtraction easier to see. The dashed line below is University of Florida's five-year average. Each vertical segment is the distance from an observed year to that line.
+
+```{r}
+#| label: school-demeaning-plot
+#| fig-cap: "University of Florida before school de-meaning. Each vertical segment is the observed share minus the school's five-year average."
+#| fig-alt: "A line chart of University of Florida's women's applicant share from 2018 through 2022. A dashed horizontal line marks the school's five-year average. Segments above the line have positive percentage-point labels and segments below it have negative labels."
+#| fig-width: 7
+#| fig-height: 4.5
+
+uf_demeaning_plot <- df_demeaned |>
+  filter(UNITID == 134130) |>
+  mutate(
+    deviation_direction = if_else(
+      school_demeaned >= 0,
+      "Above the mean",
+      "Below the mean"
+    ),
+    deviation_label = paste0(
+      if_else(school_demeaned >= 0, "+", ""),
+      formatC(100 * school_demeaned, format = "f", digits = 1),
+      " pp"
+    ),
+    label_vjust = if_else(school_demeaned >= 0, -0.7, 1.4)
+  )
+
+uf_y_limits <- range(c(
+  uf_demeaning_plot$wshare,
+  uf_demeaning_plot$school_mean
+))
+uf_y_padding <- diff(uf_y_limits) * .22
+
+ggplot(uf_demeaning_plot, aes(x = year, y = wshare)) +
+  geom_hline(
+    yintercept = uf_school_mean,
+    linetype = "dashed",
+    colour = "grey35",
+    linewidth = .55
+  ) +
+  geom_line(aes(group = 1), colour = "grey55", linewidth = .55) +
+  geom_segment(
+    aes(
+      xend = year,
+      y = school_mean,
+      yend = wshare,
+      colour = deviation_direction
+    ),
+    linewidth = .95
+  ) +
+  geom_point(size = 2.5, colour = "#1F4E79") +
+  geom_text(
+    aes(label = deviation_label, vjust = label_vjust),
+    size = 3.4,
+    colour = "grey20"
+  ) +
+  annotate(
+    "text",
+    x = max(uf_demeaning_plot$year) + .18,
+    y = uf_school_mean,
+    label = "five-year mean",
+    hjust = 0,
+    vjust = -0.7,
+    size = 3.2,
+    colour = "grey25"
+  ) +
+  scale_colour_manual(
+    values = c(
+      "Above the mean" = "#1F4E79",
+      "Below the mean" = "#B64E31"
+    ),
+    guide = "none"
+  ) +
+  scale_x_continuous(
+    breaks = sort(unique(uf_demeaning_plot$year)),
+    expand = expansion(mult = c(.04, .19))
+  ) +
+  scale_y_continuous(labels = scales::label_percent(accuracy = .1)) +
+  coord_cartesian(
+    ylim = uf_y_limits + c(-uf_y_padding, uf_y_padding),
+    clip = "off"
+  ) +
+  labs(
+    x = NULL,
+    y = "Women's share of applicants",
+    caption = "Above the mean: positive de-meaned value. Below the mean: negative de-meaned value."
+  ) +
+  theme_minimal(base_size = 12, base_family = "Helvetica") +
+  theme(
+    panel.border = element_rect(colour = "black", fill = NA, linewidth = .65),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor = element_blank(),
+    plot.caption = element_text(hjust = 0),
+    plot.margin = margin(t = 14, r = 52, b = 14, l = 14)
+  )
+```
+
+The blue and rust segments are not another model. They are the school-demeaned values in the table: positive when the year's share is above University of Florida's own mean and negative when it is below. The figure shows only the first subtraction. We remove year averages next.
+
+Read the 2018 row across. The observed share is `r format_three(uf_2018)`; the school mean is `r format_three(uf_school_mean)`; so `school_demeaned` is `r format_three(uf_2018 - uf_school_mean)`. That row's year mean is `r df_demeaned |> filter(UNITID == 134130, year == 2018) |> pull(year_mean) |> format_three()`, and the grand mean is `r format_three(grand_wshare_mean)`. After removing both the school and year averages, then adding the grand mean once, its `two_way_demeaned` value is `r df_demeaned |> filter(UNITID == 134130, year == 2018) |> pull(two_way_demeaned) |> format_three()`.
+
+The `school_demeaned` column removes University of Florida's usual level. That alone is useful, but national trends still remain. The average applicant share across every school rose to `r df_demeaned |> filter(year == 2021) |> pull(year_mean) |> first() |> round(3)` in 2021. If every school moved because of a national change in college applications, we do not want to credit Florida's policy status for that shared movement.
+
+So a two-way fixed-effect model also removes each year's average. Because this sample is perfectly balanced — the same `r df |> distinct(UNITID) |> nrow()` schools appear in all five years — the two-way arithmetic is especially transparent:
+
+$$
+\widetilde{wshare}_{it}
+= wshare_{it}
+- \overline{wshare}_{i}
+- \overline{wshare}_{t}
++ \overline{wshare}.
+$$
+
+The final `grand_mean` puts the overall level back once, so we do not subtract too much. For University of Florida in 2022, the calculation, shown to five decimal places so rounding does not get in the way, is:
+
+$$
+`r format_five(uf_2022)` - `r format_five(uf_school_mean)` -
+`r format_five(mean_2022)` + `r format_five(grand_wshare_mean)` =
+`r format_five(uf_2022 - uf_school_mean - mean_2022 + grand_wshare_mean)`.
+$$
+
+That says its 2022 value was about 1.6 percentage points below what we would expect from its own typical level plus the common 2022 shift. The regression performs this operation for every school-year and, just as importantly, applies the same transformation to the event-study terms on the right-hand side.
+
+::: {.callout-note appearance="simple" title="A Precision Note About De-meaning"}
+The arithmetic above is exact for this balanced, two-way example. Do not assume that every multi-fixed-effect model can be calculated by subtracting one mean after another. With an unbalanced panel or several non-nested fixed effects, the transformations overlap. `feols()` handles that projection for you.
+:::
+
+Fixed effects remove time-invariant school differences and shocks common to every school in a year. They do **not** solve every omitted-variable problem. A state-specific change that occurs at the same time as anticipated *Dobbs* could still be a problem. That is why the pre-period estimates and the research design still matter.
+
+## The Main Model
+
+Now we can write the model that reproduces the main Walker event study.
+
+$$
+\begin{aligned}
+\text{wshare}_{ijt} ={}&
+\mu_i + \lambda_t \\
+&+ \sum_{\ell \ne 2021}
+\delta_\ell \left[
+\text{repeal}_j \times \mathbb{1}(t = \ell)
+\right] + \varepsilon_{ijt}.
+\end{aligned}
+$$
+
+The equation keeps the two independent fixed-effect baselines in view: $\mu_i$ is each school's usual level, and $\lambda_t$ is the shift shared by all schools in year $t$. The event-study terms, $\delta_\ell$, are still the terms we want to estimate. The legacy Walker code also includes a state term; the note immediately after the code explains why that does not add a third independent de-meaning step here.
+
+Once the school's usual level has been absorbed, the same informal derivative has a particularly clean interpretation:
+
+$$
+\left.
+\frac{\partial \text{wshare}_{ijt}}
+{\partial \text{repeal}_j}
+\right|_{t=\ell}
+= \delta_\ell,
+\qquad \ell \ne 2021.
+$$
+
+Each $\delta_\ell$ is the ban-minus-control change relative to 2021. The omitted 2021 interaction is zero by construction, not an estimated zero.
+
+```{r}
+#| label: main-event-study-model
+
+main_model <- feols(
+  wshare ~ i(year, repeal, ref = 2021) | UNITID + STABBR + year,
+  cluster = ~STABBR,
+  data = df
+)
+
+summary(main_model)
+```
+
+```{r}
+#| label: lean-fixed-effect-comparison
+#| include: false
+
+lean_model <- feols(
+  wshare ~ i(year, repeal, ref = 2021) | UNITID + year,
+  cluster = ~STABBR,
+  data = df
+)
+
+legacy_se_2022 <- se(main_model)[["year::2022:repeal"]]
+lean_se_2022 <- se(lean_model)[["year::2022:repeal"]]
+```
+
+Everything before the vertical bar creates the event-study interactions. Everything after it is absorbed as fixed effects.
+
+- `UNITID` compares each school with itself over time.
+- `STABBR` is the legacy state fixed effect; it is nested within `UNITID` in this data.
+- `year` removes changes common to all schools in a given year.
+- `cluster = ~STABBR` allows the uncertainty to be correlated within a state. Schools in Texas can experience the same state-level shock; pretending they are completely independent would make our confidence intervals too narrow.
+
+::: {.callout-note appearance="simple" title="Why Both School and State Appear in Walker's Formula"}
+This is not a contradiction. Every `UNITID` in this data belongs to exactly one `STABBR`. Once school fixed effects are included, state fixed effects do not create a third independent de-meaning step: the school effects already absorb them. A leaner `| UNITID + year` formula produces the same fitted values and event-study point estimates.
+
+It does **not** necessarily print the same default clustered standard errors. `fixest`'s small-sample adjustment counts the absorbed fixed effects. Here, the 2022 clustered standard error is `r format_four(legacy_se_2022)` with the legacy formula and `r format_four(lean_se_2022)` with the leaner one, even though the coefficient does not move. Keep the existing Walker formula when reproducing its reported output. In a new project, write the leaner formula if it reflects the design, then choose and report the standard-error correction deliberately. Keep state clustering either way.
+:::
+
+The 2022 coefficient is `r round(coef(main_model)["year::2022:repeal"] * 100, 2)` percentage points. Read it carefully: compared with the 2021 gap, women's share of applications fell by about 0.72 percentage points more at ban-state schools than at control-state schools in 2022. The 95% confidence interval does not cross zero. The 2018, 2019, and 2020 intervals do cross zero, which is reassuring for the parallel-trends story but does not prove it.
+
+### Read the Summary
+
+`summary(main_model)` reports more than the event-study estimates:
+
+- **Estimate** is the relative-to-2021 difference-in-difference for that year.
+- **Standard error**, **t value**, and **p value** describe how precisely the estimate is measured, using state-clustered uncertainty.
+- **Fixed-effects** counts tell you how many schools, states, and years were absorbed.
+- **Within R-squared** asks how much of the variation left after removing school and year baselines is associated with the event-study terms. It is a descriptive diagnostic, not a pass/fail grade for the model. The adjusted R-squared is high largely because each school has its own stable baseline.
+
+There are only `r df |> distinct(STABBR) |> nrow()` state clusters, so do not let a small p value hypnotize you. The number tells you something useful; it does not relieve you of the job of judging the design.
+
+### Check It with `iplot()`
+
+`iplot()` makes a fast event-study graphic directly from the `i()` coefficients.
+
+```{r}
+#| label: demo-iplot
+
+iplot(main_model)
+```
+
+It is great for a check. You should see the three pre-2021 estimates close to zero, the omitted 2021 reference period at zero, and the negative 2022 estimate. The 2021 dot is not an estimate that happened to equal zero; it is mechanically set to zero because `ref = 2021` made it the comparison year.
+
+Do not spend an hour styling `iplot()`. Its job is to tell you whether the model has produced the right basic result. The next chapter turns the model output into a dataframe and gives you a plot you can actually use in a README, paper, or presentation.
+
+## What's Next
+
+The model object knows a lot, but it is not yet a useful figure. Next, we will pull the event-study estimates and confidence intervals into a plain dataframe, build a Walker-style plot, and turn the recurring steps into functions so a subgroup analysis is not a copy/paste disaster. We will then put the complete workflow in `scripts/analysis/main.R` and call it from `Run All.R`.

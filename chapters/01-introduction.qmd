@@ -4,7 +4,7 @@ This book teaches empirical replication through short, self-contained exercises.
 
 Before the first exercise, get your tools set up. Do this once, carefully, and every exercise after this one starts from the same foundation.
 
-This book is a work in progress. The Walker unit currently covers the paper itself and data processing; the combining-data and analysis steps are still being written and aren't in the book yet.
+This book is a work in progress. The Walker unit currently follows the paper from setup and data processing through the main analysis and figure. We will keep adding exercises and extensions.
 
 ## Install R and RStudio
 

@@ -1,13 +1,13 @@
 #==== LOAD PACKAGES =====
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+
 #load pacman to facilitate package loading
-suppressMessages(install.packages("pacman",quiet = TRUE)) #do this quietly to suppress installation messages
-library(pacman)
+if (!requireNamespace("pacman", quietly = TRUE)) {
+  install.packages("pacman")
+}
 
-#load other packages
-pacman::p_load(readxl,here)
-
-#auto installs:ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
-pacman::p_load(tidyverse)
+#auto installs: ggplot2, tibble, tidyr, readr, purrr, dplyr, stringr, forcats
+pacman::p_load(readxl, here, tidyverse)
 
 #==== IMPORT RANKINGS DATA ====
 #set original data folder path

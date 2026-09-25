@@ -1,0 +1,237 @@
+# Analysis: From Model Output to Figures {#sec-walker-figures}
+
+```{r}
+#| label: silent-figure-setup
+#| include: false
+
+options(repos = c(CRAN = "https://cloud.r-project.org"))
+library(here)
+library(tidyverse)
+library(fixest)
+load(here("data", "saved data", "maindf.Rdata"))
+
+main_model <- feols(
+  wshare ~ i(year, repeal, ref = 2021) | UNITID + STABBR + year,
+  cluster = ~STABBR,
+  data = df
+)
+```
+
+You have a model. That is not the same thing as having a figure.
+
+A `fixest` model object is designed to remember everything that happened in estimation: the data, the formula, fixed effects, residuals, standard errors, and more. That is exactly what you want for analysis. It is far too much for `ggplot()`, which wants an ordinary dataframe with one row per point you plan to draw.
+
+This chapter makes that dataframe, then turns it into a figure. After that, we will put the recurring pieces into functions. The main result, a top-50 result, a 51-100 result, and any other filtered version of this analysis should differ by the data you hand the model — not by a new block of copy/pasted plotting code.
+
+::: {.callout-note appearance="minimal" title="Coding Learning Objectives"}
+- model-native extraction with `iplot(..., only.params = TRUE)`
+- `transmute()`
+- `ggplot()`, `geom_point()`, and `geom_errorbar()`
+- writing and using functions
+- `ggsave()`
+:::
+
+## Get the Event Study into a Dataframe
+
+You may have used `broom::tidy()` before. It is a good general tool, and it is absolutely reasonable for most model objects. It turns a regression table into a tibble with columns such as `term`, `estimate`, `std.error`, and confidence intervals.
+
+For *this* model, though, `fixest` gives us something even better. `iplot()` already knows which coefficients came from `i()`. When you ask for `only.params = TRUE`, it returns the plotting data rather than drawing the quick diagnostic plot. Most importantly, it carries along the 2021 reference period, which `broom::tidy()` would omit because there is no estimated coefficient for it.
+
+So: `broom::tidy()` is not wrong. For a general regression, use it. For a `fixest` event study built with `i()`, the model-native extractor is less fragile because we do not have to parse coefficient names like `year::2022:repeal` and manually restore the reference row.
+
+Here is the one-time conversion:
+
+```{r}
+#| label: model-to-dataframe
+
+main_event <- iplot(main_model, only.params = TRUE)$prms |>
+  as_tibble() |>
+  transmute(
+    year = as.integer(estimate_names),
+    estimate,
+    conf.low = ci_low,
+    conf.high = ci_high,
+    reference = is_ref
+  ) |>
+  arrange(year)
+
+main_event
+```
+
+This is now gg-plottable data: one row per year, an estimate, a lower confidence bound, an upper confidence bound, and a flag telling us whether the point is the omitted 2021 reference. Have a look at the 2021 row. It is zero with a zero-width interval because it is the comparison point, not because the model discovered a perfectly precise zero effect.
+
+## Make It Reusable
+
+The code above works once. That is not good enough. You will use it again every time you change the outcome, restrict to a subgroup, or try an extension. Copying and editing the same five lines is how small mistakes become six almost-identical figures.
+
+Make a file called `event-study-functions.R` in the `R` folder. It contains two small functions. The first fits the same model every time. The second extracts the event-study terms into the dataframe we just made.
+
+```{r}
+#| label: event-study-functions
+#| eval: false
+
+# EVENT-STUDY FUNCTIONS
+# assumes tidyverse and fixest have been loaded
+
+fit_event_study <- function(data,
+                            outcome = "wshare",
+                            reference_year = 2021) {
+  model_formula <- stats::as.formula(
+    paste0(
+      outcome,
+      " ~ i(year, repeal, ref = ",
+      reference_year,
+      ") | UNITID + STABBR + year"
+    )
+  )
+
+  fixest::feols(
+    model_formula,
+    cluster = ~STABBR,
+    data = data
+  )
+}
+
+tidy_event_study <- function(model, i_select = 1) {
+  fixest::iplot(model, i.select = i_select, only.params = TRUE)$prms |>
+    tibble::as_tibble() |>
+    dplyr::transmute(
+      year = as.integer(estimate_names),
+      estimate,
+      conf.low = ci_low,
+      conf.high = ci_high,
+      reference = is_ref
+    ) |>
+    dplyr::arrange(year)
+}
+```
+
+`fit_event_study()` has one job: turn a dataframe into the same event-study model. Its default outcome is `wshare`, so the filtered versions below need no extra argument. To use another outcome, pass its formula-ready name as a string: `fit_event_study(df, outcome = "APPLCN")` or `fit_event_study(df, outcome = "log(APPLCN)")`. `tidy_event_study()` has one job: turn that model into plotting data. The `i_select` argument matters only if a later model contains more than one `i()` term; it tells `iplot()` which set of interactions you want. For the main model, the default of 1 is right.
+
+After you save the file, source it once in your R session:
+
+```{r}
+#| label: load-event-study-functions
+
+source(here("R", "event-study-functions.R"))
+```
+
+Now the conversion becomes much easier to read:
+
+```{r}
+#| label: use-tidy-event-study
+
+main_event <- main_model |>
+  tidy_event_study()
+
+main_event
+```
+
+::: {.callout-tip title="Coding Practices: Keep Models and Figures Separate"}
+Keep the model object, the plotting dataframe, and the figure as three separate objects. If a figure looks strange, you can inspect the dataframe. If an estimate looks strange, you can inspect the model. That is much easier than debugging one giant pipe.
+:::
+
+## Build the Figure
+
+The Walker project uses a simple, good event-study design: one point and one confidence interval for each year. Here, the plotting function is just an example of function-building. It takes one dataframe and returns one plot. Keep it small enough to read in one pass.
+
+Make a second file, `R/plot preferences.R`:
+
+```{r}
+#| label: plot-event-study-function
+#| eval: false
+
+plot_event_study <- function(event_df) {
+  ggplot(event_df, aes(x = year, y = estimate)) +
+    geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = .1) +
+    geom_point() +
+    geom_hline(yintercept = 0) +
+    geom_vline(xintercept = 2021, linetype = "dashed") +
+    labs(x = NULL, y = "Change in ban-control gap") +
+    theme_minimal()
+}
+```
+
+After saving this second file, source it too:
+
+```{r}
+#| label: load-plot-preferences
+
+source(here("R", "plot preferences.R"))
+```
+
+The argument in `function(event_df)` is the one object the function receives. That object becomes the data inside `ggplot()`. Because the plot is the final expression, R returns it automatically. The 2021 line is intentionally hard-coded: this is a small example of function-building, not a generic plotting framework.
+
+This pipe has three operations: tidy the model, turn the tidy dataframe into a plot, and print the plot.
+
+```{r}
+#| label: main-ggplot
+
+main_plot <- main_model |>
+  tidy_event_study() |>
+  plot_event_study()
+
+main_plot
+```
+
+That is the figure you will actually use. It says the same thing as `iplot()`, but the plotting commands now have one short, reusable home. If you later want a different style, add it visibly with `+` after calling the function instead of adding a menu of options to this first example. Before saving this or a subgroup figure, run this one-time directory setup:
+
+```{r}
+#| label: save-main-figure
+#| eval: false
+
+dir.create(here("results", "figures"), recursive = TRUE, showWarnings = FALSE)
+
+ggsave(
+  here("results", "figures", "main.png"),
+  plot = main_plot,
+  width = 6,
+  height = 3,
+  dpi = 300
+)
+```
+
+## Reuse It for the Next Result
+
+Suppose you want the same women's-share event study for the top 50 schools. The model, tidying, and plot do not change. Only the input dataframe changes.
+
+```{r}
+#| label: top-50-event-study
+#| eval: false
+
+top_50 <- df |> filter(rank2023 <= 50)
+
+top_50_model <- fit_event_study(top_50)
+top_50_event <- tidy_event_study(top_50_model)
+top_50_plot <- plot_event_study(top_50_event)
+
+ggsave(
+  here("results", "figures", "top-1-50.png"),
+  plot = top_50_plot,
+  width = 6,
+  height = 3,
+  dpi = 300
+)
+```
+
+The filename `top-1-50.png` follows the original Walker naming: it means ranks 1 through 50. That is the payoff for the functions. You can read the analysis from top to bottom: make the sample, fit the model, tidy the estimates, plot them, save them. You do not need to retype the same plotting layers each time.
+
+Do not over-automate before you understand the first result. Run the main model, inspect `summary()`, check `iplot()`, and look at `main_event` before producing a family of plots. A function makes a good workflow faster. It also makes a bad workflow faster.
+
+## Update Run All
+
+At the bottom of `scripts/Run All.R`, add the analysis block:
+
+```{r}
+#| label: workflow-runall-analysis
+#| eval: false
+
+#===== ANALYSIS =====
+source(here("scripts", "analysis", "main.R"))
+```
+
+Now one top-level script starts at the original data, creates the clean analytic dataframe, estimates the main model, and writes the main figure. That is reproducibility in the useful sense: someone else can run the project without reconstructing its order from your memory.
+
+## What's Next
+
+You now have the main result in a form you can inspect, plot, and reproduce. The remaining Walker figures are extensions: change the sample, the outcome, or both; keep the same discipline of checking the model before trusting the picture. A different outcome may need a different y-axis, which is a reason to edit the visible plot code deliberately. Once those figures exist, you are ready to explain what replicated, what did not, and why.

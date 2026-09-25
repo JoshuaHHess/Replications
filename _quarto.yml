@@ -19,6 +19,8 @@ book:
         - chapters/walker-import-data.qmd
         - chapters/walker-make-variables.qmd
         - chapters/walker-clean-save.qmd
+        - chapters/walker-analysis.qmd
+        - chapters/walker-figures.qmd
         - chapters/walker-replication-product.qmd
 
 bibliography: references.bib

@@ -254,7 +254,7 @@ source(here("scripts","data processing","clean data.R"))
 save(df, file = here("data","saved data","maindf.Rdata"))
 ```
 
-When the analysis scripts exist, they'll get their own `#===== ANALYSIS =====` block of `source()` calls at the bottom, and Run All.R really will run all.
+The next two chapters add the `#===== ANALYSIS =====` block to the bottom of *Run All.R*. Then it really will run all: original data in, clean dataframe out, model estimated, figure saved.
 
 ## What's Next
 

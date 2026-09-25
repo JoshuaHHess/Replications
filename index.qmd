@@ -52,6 +52,8 @@ The current structure is
 
 5.  @sec-walker-clean-save discusses matching the data to @walker2023anticipatory's sample, saving the dataframe, and making a Run All script to organize the files.
 
-6.  Analysis (in progress, not yet in the book) will work through the analysis and generation of results
+6.  @sec-walker-analysis moves from raw comparisons to the main event-study model, using the data to show what fixed effects remove and how to read `summary()` and `iplot()`
 
-7.  @sec-walker-replication-product talks about the final product and gives some examples
+7.  @sec-walker-figures turns model output into a `ggplot()`-ready dataframe, builds the main figure, and uses one short function to repeat that work for filtered samples
+
+8.  @sec-walker-replication-product talks about the final product and gives some examples
